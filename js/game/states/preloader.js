@@ -15,10 +15,9 @@ preloader.preload = function () {
   this.game.load.image('tile_69', 'images/tile_69.png')
   this.game.load.image('tile_66', 'images/tile_66.png')
   this.game.load.image('tile_51', 'images/tile_51.png')
-  this.game.load.image('black_ship_1', 'images/black_ship_1.png')
-
-
-
+  this.game.load.image('blackShip', 'images/black_ship_1.png')
+  this.game.load.image('yellowShip', 'images/yellow_ship_1.png')
+  this.game.load.image('greenShip', 'images/green_ship_1.png')
 }
 
 preloader.create = function () {
