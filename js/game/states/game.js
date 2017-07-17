@@ -13,36 +13,35 @@ game.create = function () {
   islands = map.createLayer('Islands')
   track = game.add.sprite(0, 265, 'track')
 
-  blackShipStart = getPositionFromName('b20')
-  console.log(blackShipStart)
+  blackShipStart = getPositionFromName('b1')
   blackShip = game.add.sprite(blackShipStart.x, blackShipStart.y, 'blackShip')
   blackShip.scale.setTo(0.6)
   blackShip.angle = blackShipStart.angle
   blackShip.anchor.setTo(0.5, 0.5)
   blackShip.currentPosition = blackShipStart.name
 
-  yellowShipStart = getPositionFromName('b19')
+  yellowShipStart = getPositionFromName('a1')
   yellowShip = game.add.sprite(yellowShipStart.x, yellowShipStart.y, 'yellowShip')
   yellowShip.scale.setTo(0.6)
   yellowShip.angle = yellowShipStart.angle
   yellowShip.anchor.setTo(0.5, 0.5)
   yellowShip.currentPosition = yellowShipStart.name
 
-  greenShipStart = getPositionFromName('c21')
+  greenShipStart = getPositionFromName('a30')
   greenShip = game.add.sprite(greenShipStart.x, greenShipStart.y, 'greenShip')
   greenShip.scale.setTo(0.6)
   greenShip.angle = greenShipStart.angle
   greenShip.anchor.setTo(0.5, 0.5)
   greenShip.currentPosition = greenShipStart.name
 
-  redShipStart = getPositionFromName('d23')
+  redShipStart = getPositionFromName('b36')
   redShip = game.add.sprite(redShipStart.x, redShipStart.y, 'redShip')
   redShip.scale.setTo(0.6)
   redShip.angle = redShipStart.angle
   redShip.anchor.setTo(0.5, 0.5)
   redShip.currentPosition = redShipStart.name
 
-  blueShipStart = getPositionFromName('d22')
+  blueShipStart = getPositionFromName('c39')
   blueShip = game.add.sprite(blueShipStart.x, blueShipStart.y, 'blueShip')
   blueShip.scale.setTo(0.6)
   blueShip.angle = blueShipStart.angle
@@ -81,7 +80,7 @@ function test () {
   // console.log(hitLocation('d38', 'a1'))
   // console.log(blackShip.currentPosition)
   // console.log(isShipPosition('a14'))
-  shipMove(yellowShip, 'b19', 'b20')
+  shipMove(redShip, 'b36', 'b1')
 }
 
 function positionOverlay () {
