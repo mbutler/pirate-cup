@@ -3,7 +3,7 @@ const _ = require('lodash')
 const fs = require('fs')
 const trackPositions = require('./track.js')
 
-var game = {}, map, ocean, track, islands, blackShip, yellowShip, greenShip, speed = 100, keyP, blackShipStart, yellowShipStart, greenShipStart, shipList = [], shipCollide, keyO
+var game = {}, map, ocean, track, islands, blackShip, yellowShip, greenShip, redShip, blueShip, speed = 100, keyP, blackShipStart, yellowShipStart, greenShipStart, redShipStart, blueShipStart, shipList = [], shipCollide, keyO
 
 game.create = function () {
   game.physics.startSystem(Phaser.Physics.ARCADE)
@@ -13,7 +13,7 @@ game.create = function () {
   islands = map.createLayer('Islands')
   track = game.add.sprite(0, 265, 'track')
 
-  blackShipStart = getPositionFromName('b13')
+  blackShipStart = getPositionFromName('b20')
   console.log(blackShipStart)
   blackShip = game.add.sprite(blackShipStart.x, blackShipStart.y, 'blackShip')
   blackShip.scale.setTo(0.6)
@@ -21,21 +21,35 @@ game.create = function () {
   blackShip.anchor.setTo(0.5, 0.5)
   blackShip.currentPosition = blackShipStart.name
 
-  yellowShipStart = getPositionFromName('b14')
+  yellowShipStart = getPositionFromName('b19')
   yellowShip = game.add.sprite(yellowShipStart.x, yellowShipStart.y, 'yellowShip')
   yellowShip.scale.setTo(0.6)
   yellowShip.angle = yellowShipStart.angle
   yellowShip.anchor.setTo(0.5, 0.5)
   yellowShip.currentPosition = yellowShipStart.name
 
-  greenShipStart = getPositionFromName('a12')
+  greenShipStart = getPositionFromName('c21')
   greenShip = game.add.sprite(greenShipStart.x, greenShipStart.y, 'greenShip')
   greenShip.scale.setTo(0.6)
   greenShip.angle = greenShipStart.angle
   greenShip.anchor.setTo(0.5, 0.5)
   greenShip.currentPosition = greenShipStart.name
 
-  shipList.push(blackShip, yellowShip, greenShip)
+  redShipStart = getPositionFromName('d23')
+  redShip = game.add.sprite(redShipStart.x, redShipStart.y, 'redShip')
+  redShip.scale.setTo(0.6)
+  redShip.angle = redShipStart.angle
+  redShip.anchor.setTo(0.5, 0.5)
+  redShip.currentPosition = redShipStart.name
+
+  blueShipStart = getPositionFromName('d22')
+  blueShip = game.add.sprite(blueShipStart.x, blueShipStart.y, 'blueShip')
+  blueShip.scale.setTo(0.6)
+  blueShip.angle = blueShipStart.angle
+  blueShip.anchor.setTo(0.5, 0.5)
+  blueShip.currentPosition = blueShipStart.name
+
+  shipList.push(blackShip, yellowShip, greenShip, redShip, blueShip)
 
   game.physics.arcade.enable(blackShip, true)
   game.physics.arcade.enable(yellowShip, true)
@@ -67,7 +81,7 @@ function test () {
   // console.log(hitLocation('d38', 'a1'))
   // console.log(blackShip.currentPosition)
   // console.log(isShipPosition('a14'))
-  shipMove(blackShip, 'b13', 'b14')
+  shipMove(yellowShip, 'b19', 'b20')
 }
 
 function positionOverlay () {
@@ -202,11 +216,11 @@ function ramming (location, ship) {
   }
 
   // if they hit from the front, they should be coming off a wall
-  // we bounce off that wall
+  // we bounce off that wall. Need to check the rear positions we'll move into
   if (location === 'front') {
-    if (position.moves[2] === '') {
+    if (position.moves[3] === '') {
       location = 'right'
-    } else if (position.moves[0] === '') {
+    } else if (position.moves[5] === '') {
       location = 'left'
     }
   }
