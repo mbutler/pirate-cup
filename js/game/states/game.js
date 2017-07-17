@@ -1,8 +1,9 @@
 'use strict'
 const _ = require('lodash')
-const trackPositions = require('./track-positions.js')
+const fs = require('fs')
+const trackPositions = require('./track.js')
 
-var game = {}, map, ocean, track, islands, blackShip, yellowShip, greenShip, speed = 100, keySpace, space = 1, keyP, blackShipStart, yellowShipStart, greenShipStart, shipList = [], shipCollide
+var game = {}, map, ocean, track, islands, blackShip, yellowShip, greenShip, speed = 100, keyP, blackShipStart, yellowShipStart, greenShipStart, shipList = [], shipCollide, keyO
 
 game.create = function () {
   game.physics.startSystem(Phaser.Physics.ARCADE)
@@ -12,21 +13,22 @@ game.create = function () {
   islands = map.createLayer('Islands')
   track = game.add.sprite(0, 265, 'track')
 
-  blackShipStart = getPositionFromName('c20')
+  blackShipStart = getPositionFromName('b13')
+  console.log(blackShipStart)
   blackShip = game.add.sprite(blackShipStart.x, blackShipStart.y, 'blackShip')
   blackShip.scale.setTo(0.6)
   blackShip.angle = blackShipStart.angle
   blackShip.anchor.setTo(0.5, 0.5)
   blackShip.currentPosition = blackShipStart.name
 
-  yellowShipStart = getPositionFromName('d23')
+  yellowShipStart = getPositionFromName('b14')
   yellowShip = game.add.sprite(yellowShipStart.x, yellowShipStart.y, 'yellowShip')
   yellowShip.scale.setTo(0.6)
   yellowShip.angle = yellowShipStart.angle
   yellowShip.anchor.setTo(0.5, 0.5)
   yellowShip.currentPosition = yellowShipStart.name
 
-  greenShipStart = getPositionFromName('d22')
+  greenShipStart = getPositionFromName('a12')
   greenShip = game.add.sprite(greenShipStart.x, greenShipStart.y, 'greenShip')
   greenShip.scale.setTo(0.6)
   greenShip.angle = greenShipStart.angle
@@ -53,10 +55,31 @@ game.create = function () {
   keyP = game.input.keyboard.addKey(Phaser.KeyCode.P)
   keyP.onUp.add(test)
 
+  keyO = game.input.keyboard.addKey(Phaser.KeyCode.O)
+  keyO.onDown.add(positionOverlay)
+
   shipCollide = new Phaser.Signal()
   shipCollide.add(ramming, this)
 }
 
+function test () {
+  // shipCollide.dispatch()
+  // console.log(hitLocation('d38', 'a1'))
+  // console.log(blackShip.currentPosition)
+  // console.log(isShipPosition('a14'))
+  shipMove(blackShip, 'b13', 'b14')
+}
+
+function positionOverlay () {
+  let text
+
+  _.forEach(trackPositions, (pos) => {
+    text = game.add.text(pos.x, pos.y, pos.name)
+    text.anchor.setTo(0.5, 0.5)
+  })
+}
+
+// returns boolean based on if a ship occupies a particular position
 function isShipPosition (position) {
   let isShip = false
 
@@ -69,6 +92,7 @@ function isShipPosition (position) {
   return isShip
 }
 
+// returns the ship at a particular position
 function getShipFromPosition (position) {
   let ship
 
@@ -81,14 +105,8 @@ function getShipFromPosition (position) {
   return ship
 }
 
-function test () {
-  // shipCollide.dispatch()
-  // console.log(hitLocation('d38', 'a1'))
-  // console.log(blackShip.currentPosition)
-  // console.log(isShipPosition('a14'))
-  shipMove(blackShip, 'c20', 'd23')
-}
-
+// returns the direction side of the rammed ship that is hit
+// parameters are the starting and ending location of the ramming ship
 function hitLocation (starting, ending) {
   let moveIndex, direction
   console.log('hit start: ', starting, 'hit end: ', ending)
@@ -96,14 +114,18 @@ function hitLocation (starting, ending) {
   _.forEach(trackPositions, (pos) => {
     if (pos.name === starting) {
       // look up the move of the ramming ship
+      // indexOf returns first truthy value. Should be OK since moves are in the first three indexes
       moveIndex = _.indexOf(pos.moves, ending)
     }
   })
 
-  // postions move array is left to right
-  // 0: left
-  // 1: center
-  // 2: right
+  // postions move array is clockwise around ship starting with front left
+  // 0: front left
+  // 1: front center
+  // 2: front right
+  // 3: rear right
+  // 4: rear center
+  // 5: rear left
   if (moveIndex === 0) {
     // if they are moving to the left, we get hit on the right
     direction = 'right'
@@ -113,6 +135,14 @@ function hitLocation (starting, ending) {
   } else if (moveIndex === 2) {
     // if they are moving to the right, we get hit on the left
     direction = 'left'
+  } else if (moveIndex === 5) {
+    // if they are knocked back to the left, we get hit on the right
+    direction = 'right'
+  } else if (moveIndex === 3) {
+    // if they are knocked back to the right, we get hit on the left
+    direction = 'left'
+  } else {
+    direction = 'front'
   }
 
   return direction
@@ -135,59 +165,10 @@ function getPositionFromXY (x, y) {
   return position
 }
 
-// returns the position directly behind
-function rear (position) {
-  let letter = position.charAt(0)
-  let number = position.substr(1)
-  let newNumber = _.parseInt(number) - 1
-  let newPosition = letter + _.toString(newNumber)
-
-  if (position === 'a1') {
-    newPosition = 'a30'
-  } else if (position === 'b1') {
-    newPosition = 'b36'
-  } else if (position === 'c1') {
-    newPosition = 'c40'
-  } else if (position === 'd1') {
-    newPosition = 'd44'
-  }
-
-  return newPosition
-}
-
-function front (position) {
-  let letter = position.charAt(0)
-  let number = position.substr(1)
-  let newNumber = _.parseInt(number) + 1
-  let newPosition = letter + _.toString(newNumber)
-
-  if (position === 'a1') {
-    newPosition = 'a30'
-  } else if (position === 'b1') {
-    newPosition = 'b36'
-  } else if (position === 'c1') {
-    newPosition = 'c40'
-  } else if (position === 'd1') {
-    newPosition = 'd44'
-  }
-
-  return newPosition
-}
-
-function shipMove (ship, starting, ending, ramming) {
+function shipMove (ship, starting, ending) {
   let start = getPositionFromName(starting)
   let end = getPositionFromName(ending)
-  let moveTween, angleTween
-
   console.log('moving ship: ', ship.key, start.name, end.name)
-
-  // if we're ramming, we need to shift positions back one
-  if (ramming) {
-    end = rear(end.name)
-    end = getPositionFromName(end)
-    start = rear(start.name)
-    start = getPositionFromName(start)
-  }
 
   if (isShipPosition(end.name) === true) {
     let rammed = getShipFromPosition(end.name)
@@ -196,52 +177,56 @@ function shipMove (ship, starting, ending, ramming) {
     shipCollide.dispatch(location, rammed)
   }
 
-  // don't run rear() on the position if it hit the wall and is falling back
-  // otherwise it will go back one position too far
-  // check to see if the intended position is right behind and then keep it that way
-  if (ramming && (end.name === rear(start.name))) {
-    end = getPositionFromName(ending)
-    start = getPositionFromName(starting)
-  }
+  ship.currentPosition = end.name
 
-  moveTween = game.add.tween(ship).to({ x: end.x, y: end.y }, 500, Phaser.Easing.Back.Out, true)
-  angleTween = game.add.tween(ship).to({ angle: end.angle }, 500, Phaser.Easing.Back.Out, true)
-
-  moveTween.onComplete.addOnce(function () { ship.currentPosition = end.name }, this)
+  game.add.tween(ship).to({ x: end.x, y: end.y }, 500, Phaser.Easing.Back.Out, true)
+  game.add.tween(ship).to({ angle: end.angle }, 500, Phaser.Easing.Back.Out, true)
 }
 
-function ramming (direction, ship) {
-  let moveTo, moveIndex, position, currentPosition = ship.currentPosition
+// 'ship' is the ship being rammed
+//
+function ramming (location, ship) {
+  let moveTo,
+    moveIndex,
+    position,
+    currentPosition = ship.currentPosition
 
   console.log('ramming ship: ', ship.key, ship.currentPosition)
 
   position = getPositionFromName(ship.currentPosition)
-  console.log('direction: ', direction)
+  console.log('direction: ', location)
 
-  // if it's from the rear it's 50/50 chance going right or left
-  if (direction === 'rear') {
-    direction = _.sample(['left', 'right'])
+  // if it's from the rear there's a 50/50 chance going right or left
+  if (location === 'rear') {
+    location = _.sample(['left', 'right'])
   }
 
-  console.log('new dir: ', direction)
-  // postions move array is left to right
-  // 0: left
-  // 1: center
-  // 2: right
-  if (direction === 'left') {
+  // if they hit from the front, they should be coming off a wall
+  // we bounce off that wall
+  if (location === 'front') {
+    if (position.moves[2] === '') {
+      location = 'right'
+    } else if (position.moves[0] === '') {
+      location = 'left'
+    }
+  }
+
+  console.log('new dir: ', location)
+
+  if (location === 'left') {
     // if hit from the left, move right
-    moveIndex = 2
-  } else if (direction === 'right') {
+    moveIndex = 3
+  } else if (location === 'right') {
     // if hit from the right, move left
-    moveIndex = 0
+    moveIndex = 5
   }
 
-   if (position.moves[moveIndex] === '') {
-    // if hit from left, bounce off wall
-    moveTo = rear(currentPosition)
-  } else {
-    moveTo = position.moves[moveIndex]
+  if (position.moves[moveIndex] === '') {
+    // if hitting a wall, go back
+    moveIndex = 4
   }
+
+  moveTo = position.moves[moveIndex]
 
   console.log('move index: ', moveIndex)
 
