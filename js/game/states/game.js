@@ -12,21 +12,21 @@ game.create = function () {
   islands = map.createLayer('Islands')
   track = game.add.sprite(0, 265, 'track')
 
-  blackShipStart = getPositionFromName('b19')
+  blackShipStart = getPositionFromName('c20')
   blackShip = game.add.sprite(blackShipStart.x, blackShipStart.y, 'blackShip')
   blackShip.scale.setTo(0.6)
   blackShip.angle = blackShipStart.angle
   blackShip.anchor.setTo(0.5, 0.5)
   blackShip.currentPosition = blackShipStart.name
 
-  yellowShipStart = getPositionFromName('b18')
+  yellowShipStart = getPositionFromName('d23')
   yellowShip = game.add.sprite(yellowShipStart.x, yellowShipStart.y, 'yellowShip')
   yellowShip.scale.setTo(0.6)
   yellowShip.angle = yellowShipStart.angle
   yellowShip.anchor.setTo(0.5, 0.5)
   yellowShip.currentPosition = yellowShipStart.name
 
-  greenShipStart = getPositionFromName('b20')
+  greenShipStart = getPositionFromName('d22')
   greenShip = game.add.sprite(greenShipStart.x, greenShipStart.y, 'greenShip')
   greenShip.scale.setTo(0.6)
   greenShip.angle = greenShipStart.angle
@@ -86,33 +86,44 @@ function test () {
   // console.log(hitLocation('d38', 'a1'))
   // console.log(blackShip.currentPosition)
   // console.log(isShipPosition('a14'))
-  shipMove(yellowShip, 'b18', 'b19')
+  shipMove(blackShip, 'c20', 'd23')
 }
 
 function hitLocation (starting, ending) {
   let moveIndex, direction
+  console.log('hit start: ', starting, 'hit end: ', ending)
 
   _.forEach(trackPositions, (pos) => {
     if (pos.name === starting) {
+      // look up the move of the ramming ship
       moveIndex = _.indexOf(pos.moves, ending)
     }
   })
 
+  // postions move array is left to right
+  // 0: left
+  // 1: center
+  // 2: right
   if (moveIndex === 0) {
+    // if they are moving to the left, we get hit on the right
     direction = 'right'
   } else if (moveIndex === 1) {
+    // if they are moving forward, we get hit in the rear
     direction = 'rear'
   } else if (moveIndex === 2) {
+    // if they are moving to the right, we get hit on the left
     direction = 'left'
   }
 
   return direction
 }
 
+// returns a position object given the position name
 function getPositionFromName (postionName) {
   return _.find(trackPositions, ['name', postionName])
 }
 
+// returns a postions object given an x/y pixel coordinate
 function getPositionFromXY (x, y) {
   let position
   _.forEach(trackPositions, (pos) => {
@@ -124,18 +135,73 @@ function getPositionFromXY (x, y) {
   return position
 }
 
-function shipMove (ship, starting, ending) {
+// returns the position directly behind
+function rear (position) {
+  let letter = position.charAt(0)
+  let number = position.substr(1)
+  let newNumber = _.parseInt(number) - 1
+  let newPosition = letter + _.toString(newNumber)
+
+  if (position === 'a1') {
+    newPosition = 'a30'
+  } else if (position === 'b1') {
+    newPosition = 'b36'
+  } else if (position === 'c1') {
+    newPosition = 'c40'
+  } else if (position === 'd1') {
+    newPosition = 'd44'
+  }
+
+  return newPosition
+}
+
+function front (position) {
+  let letter = position.charAt(0)
+  let number = position.substr(1)
+  let newNumber = _.parseInt(number) + 1
+  let newPosition = letter + _.toString(newNumber)
+
+  if (position === 'a1') {
+    newPosition = 'a30'
+  } else if (position === 'b1') {
+    newPosition = 'b36'
+  } else if (position === 'c1') {
+    newPosition = 'c40'
+  } else if (position === 'd1') {
+    newPosition = 'd44'
+  }
+
+  return newPosition
+}
+
+function shipMove (ship, starting, ending, ramming) {
   let start = getPositionFromName(starting)
   let end = getPositionFromName(ending)
   let moveTween, angleTween
 
   console.log('moving ship: ', ship.key, start.name, end.name)
 
-  if (isShipPosition(end.name) === true) {    
+  // if we're ramming, we need to shift positions back one
+  if (ramming) {
+    end = rear(end.name)
+    end = getPositionFromName(end)
+    start = rear(start.name)
+    start = getPositionFromName(start)
+  }
+
+  if (isShipPosition(end.name) === true) {
     let rammed = getShipFromPosition(end.name)
     console.log('detected ship at: ', rammed.key, rammed.currentPosition)
     let location = hitLocation(start.name, end.name)
     shipCollide.dispatch(location, rammed)
+  }
+
+  // don't run rear() on the position if it hit the wall and is falling back
+  // otherwise it will go back one position too far
+  // check to see if the intended position is right behind and then keep it that way
+  if (ramming && (end.name === rear(start.name))) {
+    end = getPositionFromName(ending)
+    start = getPositionFromName(starting)
   }
 
   moveTween = game.add.tween(ship).to({ x: end.x, y: end.y }, 500, Phaser.Easing.Back.Out, true)
@@ -150,21 +216,41 @@ function ramming (direction, ship) {
   console.log('ramming ship: ', ship.key, ship.currentPosition)
 
   position = getPositionFromName(ship.currentPosition)
+  console.log('direction: ', direction)
 
-  if (direction === 'left') {
-    moveIndex = 2
-  } else if (direction === 'right') {
-    moveIndex = 0
-  } else if (direction === 'rear') {
-    moveIndex = 1
+  // if it's from the rear it's 50/50 chance going right or left
+  if (direction === 'rear') {
+    direction = _.sample(['left', 'right'])
   }
 
-  moveTo = position.moves[moveIndex]
+  console.log('new dir: ', direction)
+  // postions move array is left to right
+  // 0: left
+  // 1: center
+  // 2: right
+  if (direction === 'left') {
+    // if hit from the left, move right
+    moveIndex = 2
+  } else if (direction === 'right') {
+    // if hit from the right, move left
+    moveIndex = 0
+  }
+
+   if (position.moves[moveIndex] === '') {
+    // if hit from left, bounce off wall
+    moveTo = rear(currentPosition)
+  } else {
+    moveTo = position.moves[moveIndex]
+  }
+
+  console.log('move index: ', moveIndex)
+
+  console.log('move to: ', moveTo)
 
   if (moveTo !== '') {
     game.time.events.add(100, function () {
-      game.camera.shake(0.0125, 100)      
-      shipMove(ship, currentPosition, moveTo)
+      game.camera.shake(0.0125, 100)
+      shipMove(ship, currentPosition, moveTo, true)
     }, this)
   }
 }
