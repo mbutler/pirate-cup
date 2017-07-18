@@ -13,35 +13,35 @@ game.create = function () {
   islands = map.createLayer('Islands')
   track = game.add.sprite(0, 265, 'track')
 
-  blackShipStart = getPositionFromName('b1')
+  blackShipStart = getPositionFromName('c32')
   blackShip = game.add.sprite(blackShipStart.x, blackShipStart.y, 'blackShip')
   blackShip.scale.setTo(0.6)
   blackShip.angle = blackShipStart.angle
   blackShip.anchor.setTo(0.5, 0.5)
   blackShip.currentPosition = blackShipStart.name
 
-  yellowShipStart = getPositionFromName('a1')
+  yellowShipStart = getPositionFromName('d36')
   yellowShip = game.add.sprite(yellowShipStart.x, yellowShipStart.y, 'yellowShip')
   yellowShip.scale.setTo(0.6)
   yellowShip.angle = yellowShipStart.angle
   yellowShip.anchor.setTo(0.5, 0.5)
   yellowShip.currentPosition = yellowShipStart.name
 
-  greenShipStart = getPositionFromName('a30')
+  greenShipStart = getPositionFromName('d35')
   greenShip = game.add.sprite(greenShipStart.x, greenShipStart.y, 'greenShip')
   greenShip.scale.setTo(0.6)
   greenShip.angle = greenShipStart.angle
   greenShip.anchor.setTo(0.5, 0.5)
   greenShip.currentPosition = greenShipStart.name
 
-  redShipStart = getPositionFromName('b36')
+  redShipStart = getPositionFromName('b30')
   redShip = game.add.sprite(redShipStart.x, redShipStart.y, 'redShip')
   redShip.scale.setTo(0.6)
   redShip.angle = redShipStart.angle
   redShip.anchor.setTo(0.5, 0.5)
   redShip.currentPosition = redShipStart.name
 
-  blueShipStart = getPositionFromName('c39')
+  blueShipStart = getPositionFromName('c33')
   blueShip = game.add.sprite(blueShipStart.x, blueShipStart.y, 'blueShip')
   blueShip.scale.setTo(0.6)
   blueShip.angle = blueShipStart.angle
@@ -73,6 +73,15 @@ game.create = function () {
 
   shipCollide = new Phaser.Signal()
   shipCollide.add(ramming, this)
+
+  game.time.events.add(Phaser.Timer.SECOND * 3, function() { 
+    console.log('black ship: ' + blackShip.currentPosition,
+    'yellow ship: ' + yellowShip.currentPosition,
+    'blue ship: ' + blueShip.currentPosition,
+    'red ship: ' + redShip.currentPosition,
+    'green ship: ' + greenShip.currentPosition)
+   }, this)
+
 }
 
 function test () {
@@ -80,7 +89,7 @@ function test () {
   // console.log(hitLocation('d38', 'a1'))
   // console.log(blackShip.currentPosition)
   // console.log(isShipPosition('a14'))
-  shipMove(redShip, 'b36', 'b1')
+  shipMove(blackShip, 'c32', 'd36')
 }
 
 function positionOverlay () {
@@ -183,6 +192,7 @@ function shipMove (ship, starting, ending) {
   let end = getPositionFromName(ending)
   console.log('moving ship: ', ship.key, start.name, end.name)
 
+  // if there is a ship where we are moving, dispatch the ship collision signal
   if (isShipPosition(end.name) === true) {
     let rammed = getShipFromPosition(end.name)
     console.log('detected ship at: ', rammed.key, rammed.currentPosition)
@@ -190,19 +200,20 @@ function shipMove (ship, starting, ending) {
     shipCollide.dispatch(location, rammed)
   }
 
+  //update with new ship postion
   ship.currentPosition = end.name
 
+  // ship movement animation
   game.add.tween(ship).to({ x: end.x, y: end.y }, 500, Phaser.Easing.Back.Out, true)
   game.add.tween(ship).to({ angle: end.angle }, 500, Phaser.Easing.Back.Out, true)
 }
 
 // 'ship' is the ship being rammed
-//
+// location is the location on that ship that is being hit
 function ramming (location, ship) {
   let moveTo,
     moveIndex,
-    position,
-    currentPosition = ship.currentPosition
+    position
 
   console.log('ramming ship: ', ship.key, ship.currentPosition)
 
@@ -217,9 +228,9 @@ function ramming (location, ship) {
   // if they hit from the front, they should be coming off a wall
   // we bounce off that wall. Need to check the rear positions we'll move into
   if (location === 'front') {
-    if (position.moves[3] === '') {
+    if (position.moves[3] === 'wall') {
       location = 'right'
-    } else if (position.moves[5] === '') {
+    } else if (position.moves[5] === 'wall') {
       location = 'left'
     }
   }
@@ -234,7 +245,7 @@ function ramming (location, ship) {
     moveIndex = 5
   }
 
-  if (position.moves[moveIndex] === '') {
+  if (position.moves[moveIndex] === 'wall') {
     // if hitting a wall, go back
     moveIndex = 4
   }
@@ -245,10 +256,10 @@ function ramming (location, ship) {
 
   console.log('move to: ', moveTo)
 
-  if (moveTo !== '') {
+  if (moveTo !== 'wall') {
     game.time.events.add(100, function () {
       game.camera.shake(0.0125, 100)
-      shipMove(ship, currentPosition, moveTo, true)
+      shipMove(ship, ship.currentPosition, moveTo, true)
     }, this)
   }
 }
