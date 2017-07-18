@@ -4,7 +4,8 @@ const fs = require('fs')
 const trackPositions = require('./track.js')
 const stats = require('./stats.js')
 
-var game = {}, map, ocean, track, islands, blackShip, yellowShip, greenShip, redShip, blueShip, speed = 100, keyP, blackShipStart, yellowShipStart, greenShipStart, redShipStart, blueShipStart, shipList = [], shipCollide, keyO
+var game = {}, map, ocean, track, islands, blackShip, yellowShip, greenShip, redShip, blueShip,
+  keyP, blackShipStart, yellowShipStart, greenShipStart, redShipStart, blueShipStart, shipList = [], shipCollide, currentShip
 
 game.create = function () {
   game.physics.startSystem(Phaser.Physics.ARCADE)
@@ -74,19 +75,11 @@ game.create = function () {
   keyP = game.input.keyboard.addKey(Phaser.KeyCode.P)
   keyP.onUp.add(test)
 
-  keyO = game.input.keyboard.addKey(Phaser.KeyCode.O)
-  keyO.onDown.add(positionOverlay)
-
   shipCollide = new Phaser.Signal()
   shipCollide.add(ramming, this)
 
-  game.time.events.add(Phaser.Timer.SECOND * 3, function () {
-    console.log('black ship: ' + blackShip.currentPosition,
-    'yellow ship: ' + yellowShip.currentPosition,
-    'blue ship: ' + blueShip.currentPosition,
-    'red ship: ' + redShip.currentPosition,
-    'green ship: ' + greenShip.currentPosition)
-  }, this)
+  currentShip = greenShip
+  chooseMove(currentShip)
 }
 
 function test () {
@@ -94,16 +87,8 @@ function test () {
   // console.log(hitLocation('d38', 'a1'))
   // console.log(blackShip.currentPosition)
   // console.log(isShipPosition('a14'))
-  shipMove(blackShip, 'c32', 'c33')
-}
-
-function positionOverlay () {
-  let text
-
-  _.forEach(trackPositions, (pos) => {
-    text = game.add.text(pos.x, pos.y, pos.name)
-    text.anchor.setTo(0.5, 0.5)
-  })
+  // shipMove(blackShip, 'c32', 'c33')
+  chooseMove(currentShip)
 }
 
 // returns boolean based on if a ship occupies a particular position
@@ -180,18 +165,6 @@ function getPositionFromName (postionName) {
   return _.find(trackPositions, ['name', postionName])
 }
 
-// returns a postions object given an x/y pixel coordinate
-function getPositionFromXY (x, y) {
-  let position
-  _.forEach(trackPositions, (pos) => {
-    if (pos.x === x && pos.y === y) {
-      position = pos
-    }
-  })
-
-  return position
-}
-
 function doDamage (rammer, rammed, location) {
   if (location === 'left') {
     rammed.stats.leftHP -= 6
@@ -215,12 +188,13 @@ function doDamage (rammer, rammed, location) {
 function shipMove (ship, starting, ending) {
   let start = getPositionFromName(starting)
   let end = getPositionFromName(ending)
+  let moveTween
   console.log('moving ship: ', ship.key, start.name, end.name)
 
   // if there is a ship where we are moving, dispatch the ship collision signal
   if (isShipPosition(end.name) === true) {
     let rammed = getShipFromPosition(end.name)
-    console.log('detected ship at: ', rammed.key, rammed.currentPosition)
+    console.log('detected ' + rammed.key + ' at: ' + rammed.currentPosition)
     let location = hitLocation(start.name, end.name)
     shipCollide.dispatch(location, rammed, ship)
   }
@@ -229,8 +203,128 @@ function shipMove (ship, starting, ending) {
   ship.currentPosition = end.name
 
   // ship movement animation
-  game.add.tween(ship).to({ x: end.x, y: end.y }, 500, Phaser.Easing.Back.Out, true)
+  moveTween = game.add.tween(ship).to({ x: end.x, y: end.y }, 500, Phaser.Easing.Back.Out, true)
   game.add.tween(ship).to({ angle: end.angle }, 500, Phaser.Easing.Back.Out, true)
+
+  // if the ship being moved is our current ship, choose move again when animation is done
+  if (ship === currentShip) {
+    moveTween.onComplete.addOnce(function () { chooseMove(currentShip) }, this)
+  }
+}
+
+// returns an array of all possible moves for a ship
+function getPossibleMoves (ship) {
+  let position = getPositionFromName(ship.currentPosition)
+  let moves = _.take(position.moves, 3)
+  moves = _.pull(moves, 'wall')
+
+  return moves
+}
+
+// kicks off the move selection process
+function chooseMove (ship) {
+  let shipPosition = getPositionFromName(ship.currentPosition)
+  let ghostGroup = displayPossibleMoves(ship)
+  toggleSelection(ship, ghostGroup)
+}
+
+// loops through the ghostGroup and looks for tints and alphas
+function highlightSelectedGhost (ghostGroup, selection) {
+  let i, j
+
+  // set all highlights to default
+  for (j = 0; j < ghostGroup.children.length; j++) {
+    let ghostShip = ghostGroup.children[j]
+
+    if (ghostShip.alpha === 1) {
+      ghostShip.tint = 0x454545
+    } else {
+      ghostShip.alpha = 0.35
+    }
+  }
+
+  //pick the correct highlight for selected ship
+  for (i = 0; i < ghostGroup.children.length; i++) {
+    let ghostShip = ghostGroup.children[i]
+    if (selection === ghostShip.currentPosition) {
+      if (ghostShip.alpha === 1) {
+        ghostShip.tint = 0xf93807
+      } else {
+        ghostShip.alpha = 0.7
+      }
+    }
+  }
+}
+
+// adds three keys and loops through the possible ghost ships
+function toggleSelection (ship, ghostGroup) {
+  let keyLeft = game.input.keyboard.addKey(Phaser.Keyboard.LEFT)
+  let keyRight = game.input.keyboard.addKey(Phaser.Keyboard.RIGHT)
+  let keyEnter = game.input.keyboard.addKey(Phaser.Keyboard.ENTER)
+
+  // make the middle position the default move
+  let index = 0
+  let currentSelection = ghostGroup.children[index]
+  highlightSelectedGhost(ghostGroup, currentSelection.currentPosition)
+
+  keyLeft.onDown.add(function () {
+    index--
+    if (index < 0) { index = ghostGroup.children.length - 1 }
+    currentSelection = ghostGroup.children[index]
+    highlightSelectedGhost(ghostGroup, currentSelection.currentPosition)
+  })
+
+  keyRight.onDown.add(function () {
+    index++
+    if (index > ghostGroup.children.length - 1) { index = 0 }
+    currentSelection = ghostGroup.children[index]
+    highlightSelectedGhost(ghostGroup, currentSelection.currentPosition)
+  })
+
+  keyEnter.onDown.add(function () {
+    ghostGroup.destroy()
+    game.input.keyboard.removeKey(Phaser.Keyboard.LEFT)
+    game.input.keyboard.removeKey(Phaser.Keyboard.RIGHT)
+    game.input.keyboard.removeKey(Phaser.Keyboard.ENTER)
+    shipMove(ship, ship.currentPosition, currentSelection.currentPosition)
+  })
+}
+
+// adds sprites with tints and alphas for all the possible moves
+function displayPossibleMoves (ship) {
+  let moves = getPossibleMoves(ship)
+  let ghostGroup = game.add.group()
+
+  // iterate over all possible moves, adding a "ghost" ship in each position
+  _.forEach(moves, (ghostPosition) => {
+    let position = getPositionFromName(ghostPosition)
+    let ghostShip = game.add.sprite(position.x, position.y, ship.key)
+    ghostShip.anchor.setTo(0.5, 0.5)
+    ghostShip.angle = position.angle
+    ghostShip.currentPosition = ghostPosition
+
+    // if there is a ship there, simulate an outline
+    if (isShipPosition(position.name)) {
+      // make it just a little bigger than normal to simulate outline
+      ghostShip.scale.setTo(0.7)
+      ghostShip.alpha = 1
+      // dark grey
+      ghostShip.tint = 0x454545
+    } else {
+      ghostShip.scale.setTo(0.6)
+      ghostShip.alpha = 0.25
+      ghostShip.tint = 0xf2e805
+    }
+
+    ghostGroup.add(ghostShip)
+  })
+
+  // position it just right
+  game.world.sendToBack(ghostGroup)
+  game.world.moveUp(ghostGroup)
+  game.world.moveUp(ghostGroup)
+
+  return ghostGroup
 }
 
 // 'rammed' is the ship being rammed
@@ -288,32 +382,13 @@ function ramming (location, rammed, rammer) {
   if (moveTo !== 'wall') {
     game.time.events.add(100, function () {
       game.camera.shake(0.0125, 100)
-      shipMove(rammed, rammed.currentPosition, moveTo, true)
+      shipMove(rammed, rammed.currentPosition, moveTo)
     }, this)
   }
 }
 
 game.update = function () {
-  blackShip.body.velocity.x = 0
-  blackShip.body.velocity.y = 0
 
-  if (game.input.keyboard.isDown(Phaser.Keyboard.A)) {
-    blackShip.angle -= 1
-  }
-
-  if (game.input.keyboard.isDown(Phaser.Keyboard.S)) {
-    blackShip.angle += 1
-  }
-
-  if (game.input.keyboard.isDown(Phaser.Keyboard.LEFT)) {
-    blackShip.body.velocity.x -= speed
-  } else if (game.input.keyboard.isDown(Phaser.Keyboard.RIGHT)) {
-    blackShip.body.velocity.x += speed
-  } else if (game.input.keyboard.isDown(Phaser.Keyboard.DOWN)) {
-    blackShip.body.velocity.y += speed
-  } else if (game.input.keyboard.isDown(Phaser.Keyboard.UP)) {
-    blackShip.body.velocity.y -= speed
-  }
 }
 
 module.exports = game
