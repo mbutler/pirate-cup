@@ -5,7 +5,7 @@ const trackPositions = require('./track.js')
 const stats = require('./stats.js')
 
 var game = {}, map, ocean, track, islands, blackShip, yellowShip, greenShip, redShip, blueShip,
-  keyP, blackShipStart, yellowShipStart, greenShipStart, redShipStart, blueShipStart, shipList = [], shipCollide, currentShip
+  keyP, blackShipStart, yellowShipStart, greenShipStart, redShipStart, blueShipStart, shipList = [], shipCollide, currentShip, ghostGroup
 
 game.create = function () {
   game.physics.startSystem(Phaser.Physics.ARCADE)
@@ -78,7 +78,7 @@ game.create = function () {
   shipCollide = new Phaser.Signal()
   shipCollide.add(ramming, this)
 
-  currentShip = greenShip
+  currentShip = blackShip
   chooseMove(currentShip)
 }
 
@@ -88,7 +88,7 @@ function test () {
   // console.log(blackShip.currentPosition)
   // console.log(isShipPosition('a14'))
   // shipMove(blackShip, 'c32', 'c33')
-  chooseMove(currentShip)
+  nextShip()
 }
 
 // returns boolean based on if a ship occupies a particular position
@@ -221,11 +221,33 @@ function getPossibleMoves (ship) {
   return moves
 }
 
+function nextShip () {
+  let index = _.indexOf(shipList, currentShip)
+  let nextIndex = index + 1
+  let nextShip
+
+  if (nextIndex > shipList.length - 1) {
+    nextIndex = 0
+  }
+
+  nextShip = shipList[nextIndex]
+
+  currentShip = nextShip
+  currentShip.stats.speed = 2
+
+  chooseMove(currentShip)
+}
+
 // kicks off the move selection process
 function chooseMove (ship) {
-  let shipPosition = getPositionFromName(ship.currentPosition)
-  let ghostGroup = displayPossibleMoves(ship)
-  toggleSelection(ship, ghostGroup)
+  if (ship.stats.speed > 0) {
+    let shipPosition = getPositionFromName(ship.currentPosition)
+    let ghostGroup = displayPossibleMoves(ship)
+    toggleSelection(ship, ghostGroup)
+    ship.stats.speed--
+  } else {
+    nextShip()
+  }
 }
 
 // loops through the ghostGroup and looks for tints and alphas
@@ -243,7 +265,7 @@ function highlightSelectedGhost (ghostGroup, selection) {
     }
   }
 
-  //pick the correct highlight for selected ship
+  // pick the correct highlight for selected ship
   for (i = 0; i < ghostGroup.children.length; i++) {
     let ghostShip = ghostGroup.children[i]
     if (selection === ghostShip.currentPosition) {
@@ -312,8 +334,7 @@ function displayPossibleMoves (ship) {
       ghostShip.tint = 0x454545
     } else {
       ghostShip.scale.setTo(0.6)
-      ghostShip.alpha = 0.25
-      ghostShip.tint = 0xf2e805
+      ghostShip.alpha = 0.25      
     }
 
     ghostGroup.add(ghostShip)
