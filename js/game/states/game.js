@@ -2,6 +2,7 @@
 const _ = require('lodash')
 const fs = require('fs')
 const trackPositions = require('./track.js')
+const stats = require('./stats.js')
 
 var game = {}, map, ocean, track, islands, blackShip, yellowShip, greenShip, redShip, blueShip, speed = 100, keyP, blackShipStart, yellowShipStart, greenShipStart, redShipStart, blueShipStart, shipList = [], shipCollide, keyO
 
@@ -19,6 +20,7 @@ game.create = function () {
   blackShip.angle = blackShipStart.angle
   blackShip.anchor.setTo(0.5, 0.5)
   blackShip.currentPosition = blackShipStart.name
+  blackShip.stats = _.cloneDeep(stats)
 
   yellowShipStart = getPositionFromName('d36')
   yellowShip = game.add.sprite(yellowShipStart.x, yellowShipStart.y, 'yellowShip')
@@ -26,6 +28,7 @@ game.create = function () {
   yellowShip.angle = yellowShipStart.angle
   yellowShip.anchor.setTo(0.5, 0.5)
   yellowShip.currentPosition = yellowShipStart.name
+  yellowShip.stats = _.cloneDeep(stats)
 
   greenShipStart = getPositionFromName('d35')
   greenShip = game.add.sprite(greenShipStart.x, greenShipStart.y, 'greenShip')
@@ -33,6 +36,7 @@ game.create = function () {
   greenShip.angle = greenShipStart.angle
   greenShip.anchor.setTo(0.5, 0.5)
   greenShip.currentPosition = greenShipStart.name
+  greenShip.stats = _.cloneDeep(stats)
 
   redShipStart = getPositionFromName('b30')
   redShip = game.add.sprite(redShipStart.x, redShipStart.y, 'redShip')
@@ -40,6 +44,7 @@ game.create = function () {
   redShip.angle = redShipStart.angle
   redShip.anchor.setTo(0.5, 0.5)
   redShip.currentPosition = redShipStart.name
+  redShip.stats = _.cloneDeep(stats)
 
   blueShipStart = getPositionFromName('c33')
   blueShip = game.add.sprite(blueShipStart.x, blueShipStart.y, 'blueShip')
@@ -47,6 +52,7 @@ game.create = function () {
   blueShip.angle = blueShipStart.angle
   blueShip.anchor.setTo(0.5, 0.5)
   blueShip.currentPosition = blueShipStart.name
+  blueShip.stats = _.cloneDeep(stats)
 
   shipList.push(blackShip, yellowShip, greenShip, redShip, blueShip)
 
@@ -74,14 +80,13 @@ game.create = function () {
   shipCollide = new Phaser.Signal()
   shipCollide.add(ramming, this)
 
-  game.time.events.add(Phaser.Timer.SECOND * 3, function() { 
+  game.time.events.add(Phaser.Timer.SECOND * 3, function () {
     console.log('black ship: ' + blackShip.currentPosition,
     'yellow ship: ' + yellowShip.currentPosition,
     'blue ship: ' + blueShip.currentPosition,
     'red ship: ' + redShip.currentPosition,
     'green ship: ' + greenShip.currentPosition)
-   }, this)
-
+  }, this)
 }
 
 function test () {
@@ -89,7 +94,7 @@ function test () {
   // console.log(hitLocation('d38', 'a1'))
   // console.log(blackShip.currentPosition)
   // console.log(isShipPosition('a14'))
-  shipMove(blackShip, 'c32', 'd36')
+  shipMove(blackShip, 'c32', 'c33')
 }
 
 function positionOverlay () {
@@ -127,7 +132,7 @@ function getShipFromPosition (position) {
   return ship
 }
 
-// returns the direction side of the rammed ship that is hit
+// returns the side of the rammed ship that is hit
 // parameters are the starting and ending location of the ramming ship
 function hitLocation (starting, ending) {
   let moveIndex, direction
@@ -187,6 +192,26 @@ function getPositionFromXY (x, y) {
   return position
 }
 
+function doDamage (rammer, rammed, location) {
+  if (location === 'left') {
+    rammed.stats.leftHP -= 6
+    console.log(rammed.key + ' now has ' + rammed.stats.leftHP + ' hp on left side')
+    rammer.stats.rightHP -= 3
+    console.log(rammer.key + ' now has ' + rammer.stats.rightHP + ' hp on right side')
+  } else if (location === 'right') {
+    rammed.stats.rightHP -= 6
+    console.log(rammed.key + ' now has ' + rammed.stats.rightHP + ' hp on right side')
+    rammer.stats.leftHP -= 3
+    console.log(rammer.key + ' now has ' + rammer.stats.leftHP + ' hp on left side')
+  } else if (location === 'rear') {
+    rammed.stats.rearHP -= 6
+    console.log(rammed.key + ' now has ' + rammed.stats.rearHP + ' hp on rear side')
+    rammer.stats.mastHP -= 4
+    rammer.stats.frontHP -= 2
+    console.log(rammer.key + ' now has ' + rammer.stats.mastHP + ' hp on mast and ' + rammer.stats.frontHP + ' on front')
+  }
+}
+
 function shipMove (ship, starting, ending) {
   let start = getPositionFromName(starting)
   let end = getPositionFromName(ending)
@@ -197,10 +222,10 @@ function shipMove (ship, starting, ending) {
     let rammed = getShipFromPosition(end.name)
     console.log('detected ship at: ', rammed.key, rammed.currentPosition)
     let location = hitLocation(start.name, end.name)
-    shipCollide.dispatch(location, rammed)
+    shipCollide.dispatch(location, rammed, ship)
   }
 
-  //update with new ship postion
+  // update with new ship postion
   ship.currentPosition = end.name
 
   // ship movement animation
@@ -208,22 +233,18 @@ function shipMove (ship, starting, ending) {
   game.add.tween(ship).to({ angle: end.angle }, 500, Phaser.Easing.Back.Out, true)
 }
 
-// 'ship' is the ship being rammed
-// location is the location on that ship that is being hit
-function ramming (location, ship) {
+// 'rammed' is the ship being rammed
+// 'rammer' is the attacking ship doing the ramming
+// location is the side of the rammed ship that is being hit
+function ramming (location, rammed, rammer) {
   let moveTo,
     moveIndex,
     position
 
-  console.log('ramming ship: ', ship.key, ship.currentPosition)
+  console.log('ramming ship: ', rammed.key, rammed.currentPosition)
 
-  position = getPositionFromName(ship.currentPosition)
+  position = getPositionFromName(rammed.currentPosition)
   console.log('direction: ', location)
-
-  // if it's from the rear there's a 50/50 chance going right or left
-  if (location === 'rear') {
-    location = _.sample(['left', 'right'])
-  }
 
   // if they hit from the front, they should be coming off a wall
   // we bounce off that wall. Need to check the rear positions we'll move into
@@ -233,6 +254,14 @@ function ramming (location, ship) {
     } else if (position.moves[5] === 'wall') {
       location = 'left'
     }
+  }
+
+  // need to calculate damge right here before the rear location changes to right or left for movement
+  doDamage(rammer, rammed, location)
+
+  // if it's from the rear there's a 50/50 chance of moving right or left
+  if (location === 'rear') {
+    location = _.sample(['left', 'right'])
   }
 
   console.log('new dir: ', location)
@@ -259,7 +288,7 @@ function ramming (location, ship) {
   if (moveTo !== 'wall') {
     game.time.events.add(100, function () {
       game.camera.shake(0.0125, 100)
-      shipMove(ship, ship.currentPosition, moveTo, true)
+      shipMove(rammed, rammed.currentPosition, moveTo, true)
     }, this)
   }
 }
