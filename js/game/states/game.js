@@ -4,8 +4,8 @@ const fs = require('fs')
 const trackPositions = require('./track.js')
 const stats = require('./stats.js')
 
-var game = {}, map, ocean, track, islands, blackShip, yellowShip, greenShip, redShip, blueShip,
-  keyP, blackShipStart, yellowShipStart, greenShipStart, redShipStart, blueShipStart, shipList = [], shipCollide, currentShip, ghostGroup
+var game = {}, map, ocean, track, islands, blackShip, yellowShip, greenShip, redShip, blueShip, whiteShip,
+  keyP, blackShipStart, yellowShipStart, greenShipStart, redShipStart, blueShipStart, whiteShipStart, shipList = [], shipCollide, currentShip, ghostGroup
 
 game.create = function () {
   game.physics.startSystem(Phaser.Physics.ARCADE)
@@ -15,50 +15,85 @@ game.create = function () {
   islands = map.createLayer('Islands')
   track = game.add.sprite(0, 265, 'track')
 
-  blackShipStart = getPositionFromName('c32')
-  blackShip = game.add.sprite(blackShipStart.x, blackShipStart.y, 'blackShip')
-  blackShip.scale.setTo(0.6)
-  blackShip.angle = blackShipStart.angle
-  blackShip.anchor.setTo(0.5, 0.5)
-  blackShip.currentPosition = blackShipStart.name
-  blackShip.stats = _.cloneDeep(stats)
-
-  yellowShipStart = getPositionFromName('d36')
-  yellowShip = game.add.sprite(yellowShipStart.x, yellowShipStart.y, 'yellowShip')
-  yellowShip.scale.setTo(0.6)
-  yellowShip.angle = yellowShipStart.angle
-  yellowShip.anchor.setTo(0.5, 0.5)
-  yellowShip.currentPosition = yellowShipStart.name
-  yellowShip.stats = _.cloneDeep(stats)
-
-  greenShipStart = getPositionFromName('d35')
-  greenShip = game.add.sprite(greenShipStart.x, greenShipStart.y, 'greenShip')
-  greenShip.scale.setTo(0.6)
-  greenShip.angle = greenShipStart.angle
-  greenShip.anchor.setTo(0.5, 0.5)
-  greenShip.currentPosition = greenShipStart.name
-  greenShip.stats = _.cloneDeep(stats)
-
-  redShipStart = getPositionFromName('b30')
+  redShipStart = getPositionFromName('a1')
   redShip = game.add.sprite(redShipStart.x, redShipStart.y, 'redShip')
-  redShip.scale.setTo(0.6)
   redShip.angle = redShipStart.angle
   redShip.anchor.setTo(0.5, 0.5)
   redShip.currentPosition = redShipStart.name
   redShip.stats = _.cloneDeep(stats)
+  redShip.animations.add('normal', [0], 0, true)
+  redShip.animations.add('stroke', [1], 0, true)
+  redShip.animations.add('grey', [2], 0, true)
+  redShip.animations.add('damage1', [3], 0, true)
+  redShip.animations.add('damage2', [4], 0, true)
+  redShip.animations.add('wreck', [5], 0, true)
 
-  blueShipStart = getPositionFromName('c33')
+  blueShipStart = getPositionFromName('c1')
   blueShip = game.add.sprite(blueShipStart.x, blueShipStart.y, 'blueShip')
-  blueShip.scale.setTo(0.6)
   blueShip.angle = blueShipStart.angle
   blueShip.anchor.setTo(0.5, 0.5)
   blueShip.currentPosition = blueShipStart.name
   blueShip.stats = _.cloneDeep(stats)
+  blueShip.animations.add('normal', [0], 0, true)
+  blueShip.animations.add('stroke', [1], 0, true)
+  blueShip.animations.add('grey', [2], 0, true)
+  blueShip.animations.add('damage1', [3], 0, true)
+  blueShip.animations.add('damage2', [4], 0, true)
+  blueShip.animations.add('wreck', [5], 0, true)
 
-  shipList.push(blackShip, yellowShip, greenShip, redShip, blueShip)
+  blackShipStart = getPositionFromName('b1')
+  blackShip = game.add.sprite(blackShipStart.x, blackShipStart.y, 'blackShip')
+  blackShip.angle = blackShipStart.angle
+  blackShip.anchor.setTo(0.5, 0.5)
+  blackShip.currentPosition = blackShipStart.name
+  blackShip.stats = _.cloneDeep(stats)
+  blackShip.animations.add('normal', [0], 0, true)
+  blackShip.animations.add('stroke', [1], 0, true)
+  blackShip.animations.add('grey', [2], 0, true)
+  blackShip.animations.add('damage1', [3], 0, true)
+  blackShip.animations.add('damage2', [4], 0, true)
+  blackShip.animations.add('wreck', [5], 0, true)
 
-  game.physics.arcade.enable(blackShip, true)
-  game.physics.arcade.enable(yellowShip, true)
+  greenShipStart = getPositionFromName('c40')
+  greenShip = game.add.sprite(greenShipStart.x, greenShipStart.y, 'greenShip')
+  greenShip.angle = greenShipStart.angle
+  greenShip.anchor.setTo(0.5, 0.5)
+  greenShip.currentPosition = greenShipStart.name
+  greenShip.stats = _.cloneDeep(stats)
+  greenShip.animations.add('normal', [0], 0, true)
+  greenShip.animations.add('stroke', [1], 0, true)
+  greenShip.animations.add('grey', [2], 0, true)
+  greenShip.animations.add('damage1', [3], 0, true)
+  greenShip.animations.add('damage2', [4], 0, true)
+  greenShip.animations.add('wreck', [5], 0, true)
+
+  yellowShipStart = getPositionFromName('d1')
+  yellowShip = game.add.sprite(yellowShipStart.x, yellowShipStart.y, 'yellowShip')
+  yellowShip.angle = yellowShipStart.angle
+  yellowShip.anchor.setTo(0.5, 0.5)
+  yellowShip.currentPosition = yellowShipStart.name
+  yellowShip.stats = _.cloneDeep(stats)
+  yellowShip.animations.add('normal', [0], 0, true)
+  yellowShip.animations.add('stroke', [1], 0, true)
+  yellowShip.animations.add('grey', [2], 0, true)
+  yellowShip.animations.add('damage1', [3], 0, true)
+  yellowShip.animations.add('damage2', [4], 0, true)
+  yellowShip.animations.add('wreck', [5], 0, true)
+
+  whiteShipStart = getPositionFromName('a30')
+  whiteShip = game.add.sprite(whiteShipStart.x, whiteShipStart.y, 'whiteShip')
+  whiteShip.angle = whiteShipStart.angle
+  whiteShip.anchor.setTo(0.5, 0.5)
+  whiteShip.currentPosition = whiteShipStart.name
+  whiteShip.stats = _.cloneDeep(stats)
+  whiteShip.animations.add('normal', [0], 0, true)
+  whiteShip.animations.add('stroke', [1], 0, true)
+  whiteShip.animations.add('grey', [2], 0, true)
+  whiteShip.animations.add('damage1', [3], 0, true)
+  whiteShip.animations.add('damage2', [4], 0, true)
+  whiteShip.animations.add('wreck', [5], 0, true)
+
+  shipList.push(redShip, blueShip, blackShip, greenShip, yellowShip, whiteShip)
 
   map.addTilesetImage('tile_01', 'tile_01')
   map.addTilesetImage('tile_17', 'tile_17')
@@ -78,7 +113,7 @@ game.create = function () {
   shipCollide = new Phaser.Signal()
   shipCollide.add(ramming, this)
 
-  currentShip = blackShip
+  currentShip = redShip
   chooseMove(currentShip)
 }
 
@@ -88,7 +123,11 @@ function test () {
   // console.log(blackShip.currentPosition)
   // console.log(isShipPosition('a14'))
   // shipMove(blackShip, 'c32', 'c33')
-  nextShip()
+  // currentShip.animations.play('stroke', true)
+  // nextShip()
+  if (currentShip.animations.frame === 0) {
+    console.log('yep, normal sir')
+  }
 }
 
 // returns boolean based on if a ship occupies a particular position
@@ -240,6 +279,11 @@ function nextShip () {
 
 // kicks off the move selection process
 function chooseMove (ship) {
+  _.forEach(shipList, (ship) => {
+    ship.animations.play('normal', true)
+    ship.alpha = 1
+  })
+
   if (ship.stats.speed > 0) {
     let shipPosition = getPositionFromName(ship.currentPosition)
     let ghostGroup = displayPossibleMoves(ship)
@@ -250,30 +294,21 @@ function chooseMove (ship) {
   }
 }
 
-// loops through the ghostGroup and looks for tints and alphas
+// loops through the ghostGroup and looks for alphas
 function highlightSelectedGhost (ghostGroup, selection) {
   let i, j
 
   // set all highlights to default
   for (j = 0; j < ghostGroup.children.length; j++) {
     let ghostShip = ghostGroup.children[j]
-
-    if (ghostShip.alpha === 1) {
-      ghostShip.tint = 0x454545
-    } else {
-      ghostShip.alpha = 0.35
-    }
+    ghostShip.alpha = 0.15
   }
 
   // pick the correct highlight for selected ship
   for (i = 0; i < ghostGroup.children.length; i++) {
     let ghostShip = ghostGroup.children[i]
     if (selection === ghostShip.currentPosition) {
-      if (ghostShip.alpha === 1) {
-        ghostShip.tint = 0xf93807
-      } else {
-        ghostShip.alpha = 0.7
-      }
+      ghostShip.alpha = 0.5
     }
   }
 }
@@ -284,7 +319,7 @@ function toggleSelection (ship, ghostGroup) {
   let keyRight = game.input.keyboard.addKey(Phaser.Keyboard.RIGHT)
   let keyEnter = game.input.keyboard.addKey(Phaser.Keyboard.ENTER)
 
-  // make the middle position the default move
+  // make the first position the default move
   let index = 0
   let currentSelection = ghostGroup.children[index]
   highlightSelectedGhost(ghostGroup, currentSelection.currentPosition)
@@ -312,7 +347,7 @@ function toggleSelection (ship, ghostGroup) {
   })
 }
 
-// adds sprites with tints and alphas for all the possible moves
+// adds sprites with alphas for all the possible moves
 function displayPossibleMoves (ship) {
   let moves = getPossibleMoves(ship)
   let ghostGroup = game.add.group()
@@ -325,16 +360,10 @@ function displayPossibleMoves (ship) {
     ghostShip.angle = position.angle
     ghostShip.currentPosition = ghostPosition
 
-    // if there is a ship there, simulate an outline
+    // if there is a ship there, grey it out
     if (isShipPosition(position.name)) {
-      // make it just a little bigger than normal to simulate outline
-      ghostShip.scale.setTo(0.7)
-      ghostShip.alpha = 1
-      // dark grey
-      ghostShip.tint = 0x454545
-    } else {
-      ghostShip.scale.setTo(0.6)
-      ghostShip.alpha = 0.25      
+      let greyShip = getShipFromPosition(position.name)
+      greyShip.alpha = 0.4
     }
 
     ghostGroup.add(ghostShip)
@@ -409,6 +438,7 @@ function ramming (location, rammed, rammer) {
 }
 
 game.update = function () {
+  currentShip.animations.play('stroke', true)
 
 }
 
