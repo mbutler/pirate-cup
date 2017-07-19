@@ -6,7 +6,8 @@ let stats = {
   mastHP: 60,
   mutiny: false,
   sails: 8,
-  speed: 2
+  speed: 2,
+  drift: 2
 }
 
 module.exports = stats

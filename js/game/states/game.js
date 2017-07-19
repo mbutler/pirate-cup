@@ -4,8 +4,7 @@ const fs = require('fs')
 const trackPositions = require('./track.js')
 const stats = require('./stats.js')
 
-var game = {}, map, ocean, track, islands, blackShip, yellowShip, greenShip, redShip, blueShip, whiteShip,
-  keyP, blackShipStart, yellowShipStart, greenShipStart, redShipStart, blueShipStart, whiteShipStart, shipList = [], shipCollide, currentShip, ghostGroup
+let game = {}, map, ocean, track, islands, blackShip, yellowShip, greenShip, redShip, blueShip, whiteShip, keyP, shipList = [], shipCollide, currentShip
 
 game.create = function () {
   game.physics.startSystem(Phaser.Physics.ARCADE)
@@ -15,83 +14,23 @@ game.create = function () {
   islands = map.createLayer('Islands')
   track = game.add.sprite(0, 265, 'track')
 
-  redShipStart = getPositionFromName('a1')
-  redShip = game.add.sprite(redShipStart.x, redShipStart.y, 'redShip')
-  redShip.angle = redShipStart.angle
-  redShip.anchor.setTo(0.5, 0.5)
-  redShip.currentPosition = redShipStart.name
-  redShip.stats = _.cloneDeep(stats)
-  redShip.animations.add('normal', [0], 0, true)
-  redShip.animations.add('stroke', [1], 0, true)
-  redShip.animations.add('grey', [2], 0, true)
-  redShip.animations.add('damage1', [3], 0, true)
-  redShip.animations.add('damage2', [4], 0, true)
-  redShip.animations.add('wreck', [5], 0, true)
+  redShip = makeShip('redShip', 'a1')
+  game.add.existing(redShip)
 
-  blueShipStart = getPositionFromName('c1')
-  blueShip = game.add.sprite(blueShipStart.x, blueShipStart.y, 'blueShip')
-  blueShip.angle = blueShipStart.angle
-  blueShip.anchor.setTo(0.5, 0.5)
-  blueShip.currentPosition = blueShipStart.name
-  blueShip.stats = _.cloneDeep(stats)
-  blueShip.animations.add('normal', [0], 0, true)
-  blueShip.animations.add('stroke', [1], 0, true)
-  blueShip.animations.add('grey', [2], 0, true)
-  blueShip.animations.add('damage1', [3], 0, true)
-  blueShip.animations.add('damage2', [4], 0, true)
-  blueShip.animations.add('wreck', [5], 0, true)
+  blueShip = makeShip('blueShip', 'c1')
+  game.add.existing(blueShip)
 
-  blackShipStart = getPositionFromName('b1')
-  blackShip = game.add.sprite(blackShipStart.x, blackShipStart.y, 'blackShip')
-  blackShip.angle = blackShipStart.angle
-  blackShip.anchor.setTo(0.5, 0.5)
-  blackShip.currentPosition = blackShipStart.name
-  blackShip.stats = _.cloneDeep(stats)
-  blackShip.animations.add('normal', [0], 0, true)
-  blackShip.animations.add('stroke', [1], 0, true)
-  blackShip.animations.add('grey', [2], 0, true)
-  blackShip.animations.add('damage1', [3], 0, true)
-  blackShip.animations.add('damage2', [4], 0, true)
-  blackShip.animations.add('wreck', [5], 0, true)
+  blackShip = makeShip('blackShip', 'b1')
+  game.add.existing(blackShip)
 
-  greenShipStart = getPositionFromName('c40')
-  greenShip = game.add.sprite(greenShipStart.x, greenShipStart.y, 'greenShip')
-  greenShip.angle = greenShipStart.angle
-  greenShip.anchor.setTo(0.5, 0.5)
-  greenShip.currentPosition = greenShipStart.name
-  greenShip.stats = _.cloneDeep(stats)
-  greenShip.animations.add('normal', [0], 0, true)
-  greenShip.animations.add('stroke', [1], 0, true)
-  greenShip.animations.add('grey', [2], 0, true)
-  greenShip.animations.add('damage1', [3], 0, true)
-  greenShip.animations.add('damage2', [4], 0, true)
-  greenShip.animations.add('wreck', [5], 0, true)
+  greenShip = makeShip('greenShip', 'c40')
+  game.add.existing(greenShip)
 
-  yellowShipStart = getPositionFromName('d1')
-  yellowShip = game.add.sprite(yellowShipStart.x, yellowShipStart.y, 'yellowShip')
-  yellowShip.angle = yellowShipStart.angle
-  yellowShip.anchor.setTo(0.5, 0.5)
-  yellowShip.currentPosition = yellowShipStart.name
-  yellowShip.stats = _.cloneDeep(stats)
-  yellowShip.animations.add('normal', [0], 0, true)
-  yellowShip.animations.add('stroke', [1], 0, true)
-  yellowShip.animations.add('grey', [2], 0, true)
-  yellowShip.animations.add('damage1', [3], 0, true)
-  yellowShip.animations.add('damage2', [4], 0, true)
-  yellowShip.animations.add('wreck', [5], 0, true)
+  yellowShip = makeShip('yellowShip', 'd1')
+  game.add.existing(yellowShip)
 
-  whiteShipStart = getPositionFromName('a30')
-  whiteShip = game.add.sprite(whiteShipStart.x, whiteShipStart.y, 'whiteShip')
-  whiteShip.angle = whiteShipStart.angle
-  whiteShip.anchor.setTo(0.5, 0.5)
-  whiteShip.currentPosition = whiteShipStart.name
-  whiteShip.stats = _.cloneDeep(stats)
-  whiteShip.animations.add('normal', [0], 0, true)
-  whiteShip.animations.add('stroke', [1], 0, true)
-  whiteShip.animations.add('grey', [2], 0, true)
-  whiteShip.animations.add('damage1', [3], 0, true)
-  whiteShip.animations.add('damage2', [4], 0, true)
-  whiteShip.animations.add('wreck', [5], 0, true)
+  whiteShip = makeShip('whiteShip', 'a30')
+  game.add.existing(whiteShip)
 
   shipList.push(redShip, blueShip, blackShip, greenShip, yellowShip, whiteShip)
 
@@ -113,8 +52,25 @@ game.create = function () {
   shipCollide = new Phaser.Signal()
   shipCollide.add(ramming, this)
 
-  currentShip = redShip
+  currentShip = shipList[0]
   chooseMove(currentShip)
+}
+
+function makeShip (name, startingPositionName) {
+  let start = getPositionFromName(startingPositionName)
+  let ship = game.make.sprite(start.x, start.y, name)
+  ship.anchor.setTo(0.5, 0.5)
+  ship.angle = start.angle
+  ship.currentPosition = start
+  ship.stats = _.cloneDeep(stats)
+  ship.animations.add('normal', [0], 0, true)
+  ship.animations.add('stroke', [1], 0, true)
+  ship.animations.add('grey', [2], 0, true)
+  ship.animations.add('damage1', [3], 0, true)
+  ship.animations.add('damage2', [4], 0, true)
+  ship.animations.add('wreck', [5], 0, true)
+
+  return ship
 }
 
 function test () {
@@ -125,17 +81,38 @@ function test () {
   // shipMove(blackShip, 'c32', 'c33')
   // currentShip.animations.play('stroke', true)
   // nextShip()
-  if (currentShip.animations.frame === 0) {
-    console.log('yep, normal sir')
+  currentShip.stats.drift = 2
+}
+
+function cornering (ship) {
+  let chance = _.random(1, 60)
+  let result
+
+  if (chance <= 30) {
+    result = 'Hold the corner'
+  } else if (chance > 30 && chance <= 45) {
+    result = 'Slide out 1'
+    ship.stats.drift += 1
+  } else if (chance > 45 && chance <= 51) {
+    result = 'Slide out 2'
+    ship.stats.drift += 2
+  } else if (chance > 51 && chance <= 57) {
+    result = 'May move in 1'
+    ship.stats.drift -= 1
+  } else if (chance > 57) {
+    result = 'Slide out 3'
+    ship.stats.drift += 3
   }
+
+  return result
 }
 
 // returns boolean based on if a ship occupies a particular position
-function isShipPosition (position) {
+function isShipPosition (positionName) {
   let isShip = false
 
   _.forEach(shipList, (ship) => {
-    if (ship.currentPosition === position) {
+    if (ship.currentPosition.name === positionName) {
       isShip = true
     }
   })
@@ -144,11 +121,11 @@ function isShipPosition (position) {
 }
 
 // returns the ship at a particular position
-function getShipFromPosition (position) {
+function getShipFromPosition (positionName) {
   let ship
 
   _.forEach(shipList, (boat) => {
-    if (position === boat.currentPosition) {
+    if (positionName === boat.currentPosition.name) {
       ship = boat
     }
   })
@@ -233,27 +210,27 @@ function shipMove (ship, starting, ending) {
   // if there is a ship where we are moving, dispatch the ship collision signal
   if (isShipPosition(end.name) === true) {
     let rammed = getShipFromPosition(end.name)
-    console.log('detected ' + rammed.key + ' at: ' + rammed.currentPosition)
+    console.log('detected ' + rammed.key + ' at: ' + rammed.currentPosition.name)
     let location = hitLocation(start.name, end.name)
     shipCollide.dispatch(location, rammed, ship)
   }
 
   // update with new ship postion
-  ship.currentPosition = end.name
+  ship.currentPosition = getPositionFromName(end.name)
 
   // ship movement animation
   moveTween = game.add.tween(ship).to({ x: end.x, y: end.y }, 500, Phaser.Easing.Back.Out, true)
   game.add.tween(ship).to({ angle: end.angle }, 500, Phaser.Easing.Back.Out, true)
 
   // if the ship being moved is our current ship, choose move again when animation is done
-  if (ship === currentShip) {
-    moveTween.onComplete.addOnce(function () { chooseMove(currentShip) }, this)
+  if (ship === currentShip) {    
+      moveTween.onComplete.addOnce(function () { chooseMove(currentShip) }, this)    
   }
 }
 
 // returns an array of all possible moves for a ship
 function getPossibleMoves (ship) {
-  let position = getPositionFromName(ship.currentPosition)
+  let position = ship.currentPosition
   let moves = _.take(position.moves, 3)
   moves = _.pull(moves, 'wall')
 
@@ -285,7 +262,6 @@ function chooseMove (ship) {
   })
 
   if (ship.stats.speed > 0) {
-    let shipPosition = getPositionFromName(ship.currentPosition)
     let ghostGroup = displayPossibleMoves(ship)
     toggleSelection(ship, ghostGroup)
     ship.stats.speed--
@@ -296,18 +272,16 @@ function chooseMove (ship) {
 
 // loops through the ghostGroup and looks for alphas
 function highlightSelectedGhost (ghostGroup, selection) {
-  let i, j
-
   // set all highlights to default
-  for (j = 0; j < ghostGroup.children.length; j++) {
-    let ghostShip = ghostGroup.children[j]
+  for (let i = 0; i < ghostGroup.children.length; i++) {
+    let ghostShip = ghostGroup.children[i]
     ghostShip.alpha = 0.15
   }
 
   // pick the correct highlight for selected ship
-  for (i = 0; i < ghostGroup.children.length; i++) {
+  for (let i = 0; i < ghostGroup.children.length; i++) {
     let ghostShip = ghostGroup.children[i]
-    if (selection === ghostShip.currentPosition) {
+    if (selection === ghostShip.currentPosition.name) {
       ghostShip.alpha = 0.5
     }
   }
@@ -322,20 +296,20 @@ function toggleSelection (ship, ghostGroup) {
   // make the first position the default move
   let index = 0
   let currentSelection = ghostGroup.children[index]
-  highlightSelectedGhost(ghostGroup, currentSelection.currentPosition)
+  highlightSelectedGhost(ghostGroup, currentSelection.currentPosition.name)
 
   keyLeft.onDown.add(function () {
     index--
     if (index < 0) { index = ghostGroup.children.length - 1 }
     currentSelection = ghostGroup.children[index]
-    highlightSelectedGhost(ghostGroup, currentSelection.currentPosition)
+    highlightSelectedGhost(ghostGroup, currentSelection.currentPosition.name)
   })
 
   keyRight.onDown.add(function () {
     index++
     if (index > ghostGroup.children.length - 1) { index = 0 }
     currentSelection = ghostGroup.children[index]
-    highlightSelectedGhost(ghostGroup, currentSelection.currentPosition)
+    highlightSelectedGhost(ghostGroup, currentSelection.currentPosition.name)
   })
 
   keyEnter.onDown.add(function () {
@@ -343,7 +317,7 @@ function toggleSelection (ship, ghostGroup) {
     game.input.keyboard.removeKey(Phaser.Keyboard.LEFT)
     game.input.keyboard.removeKey(Phaser.Keyboard.RIGHT)
     game.input.keyboard.removeKey(Phaser.Keyboard.ENTER)
-    shipMove(ship, ship.currentPosition, currentSelection.currentPosition)
+    shipMove(ship, ship.currentPosition.name, currentSelection.currentPosition.name)
   })
 }
 
@@ -358,7 +332,7 @@ function displayPossibleMoves (ship) {
     let ghostShip = game.add.sprite(position.x, position.y, ship.key)
     ghostShip.anchor.setTo(0.5, 0.5)
     ghostShip.angle = position.angle
-    ghostShip.currentPosition = ghostPosition
+    ghostShip.currentPosition = getPositionFromName(ghostPosition)
 
     // if there is a ship there, grey it out
     if (isShipPosition(position.name)) {
@@ -385,9 +359,9 @@ function ramming (location, rammed, rammer) {
     moveIndex,
     position
 
-  console.log('ramming ship: ', rammed.key, rammed.currentPosition)
+  console.log('ramming ship: ', rammed.key, rammed.currentPosition.name)
 
-  position = getPositionFromName(rammed.currentPosition)
+  position = rammed.currentPosition
   console.log('direction: ', location)
 
   // if they hit from the front, they should be coming off a wall
@@ -432,14 +406,13 @@ function ramming (location, rammed, rammer) {
   if (moveTo !== 'wall') {
     game.time.events.add(100, function () {
       game.camera.shake(0.0125, 100)
-      shipMove(rammed, rammed.currentPosition, moveTo)
+      shipMove(rammed, rammed.currentPosition.name, moveTo)
     }, this)
   }
 }
 
 game.update = function () {
   currentShip.animations.play('stroke', true)
-
 }
 
 module.exports = game
