@@ -20,19 +20,19 @@ game.create = function () {
   blueShip = makeShip('blueShip', 'c15')
   game.add.existing(blueShip)
 
-  //blackShip = makeShip('blackShip', 'b1')
-  //game.add.existing(blackShip)
+  // blackShip = makeShip('blackShip', 'b1')
+  // game.add.existing(blackShip)
 
-  //greenShip = makeShip('greenShip', 'c40')
-  //game.add.existing(greenShip)
+  // greenShip = makeShip('greenShip', 'c40')
+  // game.add.existing(greenShip)
 
-  //yellowShip = makeShip('yellowShip', 'd1')
-  //game.add.existing(yellowShip)
+  // yellowShip = makeShip('yellowShip', 'd1')
+  // game.add.existing(yellowShip)
 
-  //whiteShip = makeShip('whiteShip', 'a30')
-  //game.add.existing(whiteShip)
+  // whiteShip = makeShip('whiteShip', 'a30')
+  // game.add.existing(whiteShip)
 
-  //shipList.push(redShip, blueShip, blackShip, greenShip, yellowShip, whiteShip)
+  // shipList.push(redShip, blueShip, blackShip, greenShip, yellowShip, whiteShip)
   shipList.push(redShip, blueShip)
 
   map.addTilesetImage('tile_01', 'tile_01')
@@ -89,55 +89,47 @@ function test () {
 // resolve a card. For some reason we have to update the ship's drift value inside this function instead of returning it
 function drawCorneringCards (ship) {
   let chance = _.random(1, 60)
-  let result
 
-  console.log("drawing cornering card: " + chance)
+  console.log('drawing cornering card: ' + chance)
 
   ship.stats.cornerCards -= 1
 
   if (chance <= 30) {
-    console.log('Hold the corner')   
+    console.log('Hold the corner')
 
-    // keep drawing 'hold the corners' until we can't  
-    if (ship.stats.cornerCards > 0) {      
-      console.log("corner cards: " + ship.stats.cornerCards) 
+    // keep drawing 'hold the corners' until we can't
+    if (ship.stats.cornerCards > 0) {
+      console.log('corner cards: ' + ship.stats.cornerCards)
       drawCorneringCards(ship)
     }
   } else if (chance > 30 && chance <= 45) {
     console.log('Slide out 1')
     ship.stats.drift = 1
-    ship.stats.isDrifting = true   
-    
+    ship.stats.isDrifting = true
   } else if (chance > 45 && chance <= 51) {
     console.log('Slide out 2')
     ship.stats.drift = 2
-    ship.stats.isDrifting = true   
-    
+    ship.stats.isDrifting = true
   } else if (chance > 51 && chance <= 57) {
     console.log('May move in 1')
     ship.stats.drift = -1
-    ship.stats.isDrifting = true    
-    
+    ship.stats.isDrifting = true
   } else if (chance > 57) {
     console.log('Slide out 3')
     ship.stats.drift = 3
-    ship.stats.isDrifting = true 
-    
-    
+    ship.stats.isDrifting = true
   }
-
-  
 }
 
 // find the difference between the speed limit and our speed. That's how many cards we draw
-function speedCheck (ship) {  
+function speedCheck (ship) {
   let cards = 0
   if (ship.currentPosition.speed !== undefined) {
     if (ship.stats.speed > ship.currentPosition.speed) {
-      console.log("going too fast!")
+      console.log('going too fast!')
       cards = ship.stats.speed - ship.currentPosition.speed
-      console.log("ship speed " + ship.stats.speed + " minus " + ship.currentPosition.speed)
-    }    
+      console.log('ship speed ' + ship.stats.speed + ' minus ' + ship.currentPosition.speed)
+    }
   }
 
   return cards
@@ -240,9 +232,9 @@ function doDamage (rammer, rammed, location) {
 function shipMove (ship, starting, ending) {
   let start = getPositionFromName(starting)
   let end = getPositionFromName(ending)
-  let moveTween  
+  let moveTween
   console.log('moving ship: ', ship.key, start.name, end.name)
-  console.log("movement points: " + ship.stats.movement)
+  console.log('movement points: ' + ship.stats.movement)
 
   // if there is a ship where we are moving, dispatch the ship collision signal
   if (isShipPosition(end.name) === true) {
@@ -253,22 +245,22 @@ function shipMove (ship, starting, ending) {
   }
 
   // update with new ship postion
-  ship.currentPosition = getPositionFromName(end.name)  
+  ship.currentPosition = getPositionFromName(end.name)
 
   // if we don't have any cornering cards already and we're not drifting
   // then draw the right number of cornering cards
   if (ship === currentShip && ship.stats.isDrifting === false) {
     ship.stats.cornerCards = speedCheck(ship)
-    console.log("corner cards: " + ship.stats.cornerCards)            
+    console.log('corner cards: ' + ship.stats.cornerCards)
   }
 
   // if we DO have some cornering cards left and we're not drifting
   // resolve the next cornering card
-  if (ship.stats.cornerCards > 0) {    
+  if (ship.stats.cornerCards > 0) {
     drawCorneringCards(ship)
-    console.log("drift: " + ship.stats.drift)    
-    console.log("corner cards: " + ship.stats.cornerCards) 
-  }  
+    console.log('drift: ' + ship.stats.drift)
+    console.log('corner cards: ' + ship.stats.cornerCards)
+  }
 
   // ship movement animation
   moveTween = game.add.tween(ship).to({ x: end.x, y: end.y }, 500, Phaser.Easing.Back.Out, true)
@@ -276,40 +268,40 @@ function shipMove (ship, starting, ending) {
 
   // if the ship being moved is our current ship, choose move again when animation is done
   // if we're not drifting, let us choose our next move
-  if (ship === currentShip && ship.stats.isDrifting === false) {    
-      moveTween.onComplete.addOnce(function () { 
-        
-        chooseMove(currentShip) }, this)    
-  } else if (ship === currentShip) {
+  if (ship === currentShip && ship.stats.isDrifting === false) {
+    moveTween.onComplete.addOnce(function () {
+      chooseMove(currentShip)
+    }, this)
+  } else if (ship === currentShip && ship.stats.isDrifting === true) {
     // if we are drifting, update drift value and move the ship unless it's a wall, in which case resolve wall table
     if (ship.stats.drift > 0) {
       console.log('sliding out!')
       ship.stats.drift -= 1
-      
+
       moveTween.onComplete.addOnce(function () {
         if (ship.currentPosition.moves[2] !== 'wall') {
           shipMove(ship, ending, ship.currentPosition.moves[2])
         } else {
-          console.log("On the Wall table")
+          console.log('On the Wall table')
           game.camera.shake(0.0125, 100)
         }
       })
     } else if (ship.stats.drift === -1) {
       console.log('move in!')
       ship.stats.drift += 1
-      
+
       moveTween.onComplete.addOnce(function () {
         if (ship.currentPosition.moves[1] !== 'wall') {
           shipMove(ship, ending, ship.currentPosition.moves[1])
         } else {
-          console.log("On the Wall table")
+          console.log('On the Wall table')
           game.camera.shake(0.0125, 100)
         }
       })
-    } else if (ship.stats.speed > 0) {
-      moveTween.onComplete.addOnce(function () { 
-        
-        chooseMove(currentShip) }, this) 
+    } else if (ship.stats.movement > 0) {
+      moveTween.onComplete.addOnce(function () {
+        chooseMove(currentShip)
+      }, this)
     }
   }
 }
@@ -348,7 +340,7 @@ function chooseMove (ship) {
     ship.stats.isDrifting = false
   })
 
-  if (ship.stats.movement > 0) {    
+  if (ship.stats.movement > 0) {
     let ghostGroup = displayPossibleMoves(ship)
     toggleSelection(ship, ghostGroup)
   } else {
