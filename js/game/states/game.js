@@ -16,7 +16,7 @@ game.create = function () {
   islands = map.createLayer('Islands')
   track = game.add.sprite(0, 265, 'track')
 
-  redShip = makeShip('redShip', 'a8')
+  redShip = makeShip('redShip', 'b14')
   game.add.existing(redShip)
 
   blueShip = makeShip('blueShip', 'c15')
@@ -421,7 +421,7 @@ function shipMove (ship, starting, ending) {
     moveTween.onComplete.addOnce(function () {
       chooseMove(ship)
     }, this)
-  } else if (currentShip.stats.movement === 0) {
+  } else if (ship === currentShip && ship.stats.movement === 0) {
     moveTween.onComplete.addOnce(function () {
       nextShip()
     }, this)
