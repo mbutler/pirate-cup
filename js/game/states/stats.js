@@ -9,7 +9,6 @@ let stats = {
   speed: 8,
   movement: 0,
   drift: 0,
-  isDrifting: false,
   cornerCards: 0
 }
 

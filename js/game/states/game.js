@@ -4,7 +4,9 @@ const fs = require('fs')
 const trackPositions = require('./track.js')
 const stats = require('./stats.js')
 
-let game = {}, map, ocean, track, islands, blackShip, yellowShip, greenShip, redShip, blueShip, whiteShip, keyP, shipList = [], shipCollide, currentShip
+let game = {},
+  map, ocean, track, islands, blackShip, yellowShip, greenShip, redShip, blueShip, whiteShip, keyP, shipList = [],
+  shipCollide, currentShip
 
 game.create = function () {
   game.physics.startSystem(Phaser.Physics.ARCADE)
@@ -14,26 +16,26 @@ game.create = function () {
   islands = map.createLayer('Islands')
   track = game.add.sprite(0, 265, 'track')
 
-  redShip = makeShip('redShip', 'a10')
+  redShip = makeShip('redShip', 'a8')
   game.add.existing(redShip)
 
   blueShip = makeShip('blueShip', 'c15')
   game.add.existing(blueShip)
 
-  // blackShip = makeShip('blackShip', 'b1')
-  // game.add.existing(blackShip)
+  blackShip = makeShip('blackShip', 'd16')
+  game.add.existing(blackShip)
 
-  // greenShip = makeShip('greenShip', 'c40')
-  // game.add.existing(greenShip)
+    // greenShip = makeShip('greenShip', 'c40')
+    // game.add.existing(greenShip)
 
-  // yellowShip = makeShip('yellowShip', 'd1')
-  // game.add.existing(yellowShip)
+    // yellowShip = makeShip('yellowShip', 'd1')
+    // game.add.existing(yellowShip)
 
-  // whiteShip = makeShip('whiteShip', 'a30')
-  // game.add.existing(whiteShip)
+    // whiteShip = makeShip('whiteShip', 'a30')
+    // game.add.existing(whiteShip)
 
-  // shipList.push(redShip, blueShip, blackShip, greenShip, yellowShip, whiteShip)
-  shipList.push(redShip, blueShip)
+    // shipList.push(redShip, blueShip, blackShip, greenShip, yellowShip, whiteShip)
+  shipList.push(redShip, blueShip, blackShip)
 
   map.addTilesetImage('tile_01', 'tile_01')
   map.addTilesetImage('tile_17', 'tile_17')
@@ -76,48 +78,56 @@ function makeShip (name, startingPositionName) {
 }
 
 function test () {
-  // shipCollide.dispatch()
-  // console.log(hitLocation('d38', 'a1'))
-  // console.log(blackShip.currentPosition)
-  // console.log(isShipPosition('a14'))
-  // shipMove(blackShip, 'c32', 'c33')
-  // currentShip.animations.play('stroke', true)
-  // nextShip()
-  currentShip.stats.speed = 8
+    // shipCollide.dispatch()
+    // console.log(hitLocation('d38', 'a1'))
+    // console.log(blackShip.currentPosition)
+    // console.log(isShipPosition('a14'))
+    // shipMove(blackShip, 'c32', 'c33')
+    // currentShip.animations.play('stroke', true)
+    // nextShip()
+  currentShip.stats.drift = 1
+  shipDrift(currentShip)
+}
+
+function resolveCorneringCards (ship) {
+  if (ship.stats.cornerCards > 0) {
+    drawCorneringCard(ship)
+  }
 }
 
 // resolve a card. For some reason we have to update the ship's drift value inside this function instead of returning it
-function drawCorneringCards (ship) {
+function drawCorneringCard (ship) {
   let chance = _.random(1, 60)
 
   console.log('drawing cornering card: ' + chance)
 
   ship.stats.cornerCards -= 1
+  console.log('corner cards: ' + ship.stats.cornerCards)
 
   if (chance <= 30) {
     console.log('Hold the corner')
-
     // keep drawing 'hold the corners' until we can't
     if (ship.stats.cornerCards > 0) {
-      console.log('corner cards: ' + ship.stats.cornerCards)
-      drawCorneringCards(ship)
+      drawCorneringCard(ship)
+    } else {
+      chooseMove(ship)
     }
   } else if (chance > 30 && chance <= 45) {
     console.log('Slide out 1')
     ship.stats.drift = 1
-    ship.stats.isDrifting = true
+    shipDrift(ship)
   } else if (chance > 45 && chance <= 51) {
     console.log('Slide out 2')
     ship.stats.drift = 2
-    ship.stats.isDrifting = true
+    shipDrift(ship)
   } else if (chance > 51 && chance <= 57) {
     console.log('May move in 1')
     ship.stats.drift = -1
-    ship.stats.isDrifting = true
+    shipDrift(ship)
   } else if (chance > 57) {
     console.log('Slide out 3')
     ship.stats.drift = 3
-    ship.stats.isDrifting = true
+    shipDrift(ship)
   }
 }
 
@@ -165,37 +175,37 @@ function getShipFromPosition (positionName) {
 // parameters are the starting and ending location of the ramming ship
 function hitLocation (starting, ending) {
   let moveIndex, direction
-  console.log('hit start: ', starting, 'hit end: ', ending)
+        // console.log('hit start: ', starting, 'hit end: ', ending)
 
   _.forEach(trackPositions, (pos) => {
     if (pos.name === starting) {
-      // look up the move of the ramming ship
-      // indexOf returns first truthy value. Should be OK since moves are in the first three indexes
+            // look up the move of the ramming ship
+            // indexOf returns first truthy value. Should be OK since moves are in the first three indexes
       moveIndex = _.indexOf(pos.moves, ending)
     }
   })
 
-  // postions move array is clockwise around ship starting with front left
-  // 0: front left
-  // 1: front center
-  // 2: front right
-  // 3: rear right
-  // 4: rear center
-  // 5: rear left
+    // postions move array is clockwise around ship starting with front left
+    // 0: front left
+    // 1: front center
+    // 2: front right
+    // 3: rear right
+    // 4: rear center
+    // 5: rear left
   if (moveIndex === 0) {
-    // if they are moving to the left, we get hit on the right
+        // if they are moving to the left, we get hit on the right
     direction = 'right'
   } else if (moveIndex === 1) {
-    // if they are moving forward, we get hit in the rear
+        // if they are moving forward, we get hit in the rear
     direction = 'rear'
   } else if (moveIndex === 2) {
-    // if they are moving to the right, we get hit on the left
+        // if they are moving to the right, we get hit on the left
     direction = 'left'
   } else if (moveIndex === 5) {
-    // if they are knocked back to the left, we get hit on the right
+        // if they are knocked back to the left, we get hit on the right
     direction = 'right'
   } else if (moveIndex === 3) {
-    // if they are knocked back to the right, we get hit on the left
+        // if they are knocked back to the right, we get hit on the left
     direction = 'left'
   } else {
     direction = 'front'
@@ -212,20 +222,164 @@ function getPositionFromName (postionName) {
 function doDamage (rammer, rammed, location) {
   if (location === 'left') {
     rammed.stats.leftHP -= 6
-    console.log(rammed.key + ' now has ' + rammed.stats.leftHP + ' hp on left side')
+            // console.log(rammed.key + ' now has ' + rammed.stats.leftHP + ' hp on left side')
     rammer.stats.rightHP -= 3
-    console.log(rammer.key + ' now has ' + rammer.stats.rightHP + ' hp on right side')
+            // console.log(rammer.key + ' now has ' + rammer.stats.rightHP + ' hp on right side')
   } else if (location === 'right') {
     rammed.stats.rightHP -= 6
-    console.log(rammed.key + ' now has ' + rammed.stats.rightHP + ' hp on right side')
+            // console.log(rammed.key + ' now has ' + rammed.stats.rightHP + ' hp on right side')
     rammer.stats.leftHP -= 3
-    console.log(rammer.key + ' now has ' + rammer.stats.leftHP + ' hp on left side')
+            // console.log(rammer.key + ' now has ' + rammer.stats.leftHP + ' hp on left side')
   } else if (location === 'rear') {
     rammed.stats.rearHP -= 6
-    console.log(rammed.key + ' now has ' + rammed.stats.rearHP + ' hp on rear side')
+            // console.log(rammed.key + ' now has ' + rammed.stats.rearHP + ' hp on rear side')
     rammer.stats.mastHP -= 4
     rammer.stats.frontHP -= 2
-    console.log(rammer.key + ' now has ' + rammer.stats.mastHP + ' hp on mast and ' + rammer.stats.frontHP + ' on front')
+            // console.log(rammer.key + ' now has ' + rammer.stats.mastHP + ' hp on mast and ' + rammer.stats.frontHP + ' on front')
+  }
+}
+
+function handleCollision (ship, start, end) {
+    // if there is a ship where we are moving, dispatch the ship collision signal
+  if (isShipPosition(end) === true) {
+    let rammed = getShipFromPosition(end)
+            // console.log('detected ' + rammed.key + ' at: ' + rammed.currentPosition.name)
+    let location = hitLocation(start, end)
+    shipCollide.dispatch(location, rammed, ship)
+  }
+}
+
+function wallTable (ship, side) {
+  let roll = _.random(1, 10)
+  let moveEnds = false
+  let damageSide
+
+  if (side === 'left') {
+    damageSide = ship.stats.leftHP
+  } else if (side === 'right') {
+    damageSide = ship.stats.rightHP
+  }
+
+  switch (roll) {
+    case 1:
+      damageSide -= 3
+      ship.stats.cornerCards = 0
+      chooseMove(ship)
+      console.log(' 3 wall damage to ' + damageSide)
+      break
+    case 2:
+      ship.stats.mastHP -= 3
+      ship.stats.cornerCards = 0
+      chooseMove(ship)
+      console.log(' 3 wall damage to ' + damageSide)
+      break
+    case 3:
+      ship.stats.mastHP -= 3
+      damageSide -= 3
+      ship.stats.cornerCards = 0
+      chooseMove(ship)
+      console.log('3 to both')
+      break
+    case 4:
+      ship.stats.mastHP -= 3
+      damageSide -= 3
+      ship.stats.cornerCards = 0
+      chooseMove(ship)
+      console.log('3 to both')
+      break
+    case 5:
+      ship.stats.mastHP -= 3
+      damageSide -= 3
+      ship.stats.cornerCards = 0
+      chooseMove(ship)
+      console.log('3 to both')
+      break
+    case 6:
+      ship.stats.mastHP -= 6
+      damageSide -= 6
+      ship.stats.cornerCards = 0
+      chooseMove(ship)
+      console.log('6 to both')
+      break
+    case 7:
+      ship.stats.mastHP -= 6
+      damageSide -= 6
+      ship.stats.cornerCards = 0
+      nextShip()
+      console.log('CRASH! 6 to both. move ends')
+      break
+    case 8:
+      ship.stats.mastHP -= 6
+      damageSide -= 6
+      ship.stats.cornerCards = 0
+      nextShip()
+      console.log('CRASH! 6 to both. move ends. Possibly thrown from ship')
+      break
+    case 9:
+      ship.stats.mastHP -= 6
+      damageSide -= 6
+      ship.stats.cornerCards = 0
+      nextShip()
+      console.log('CRASH! 6 to both. move ends. Possibly thrown from ship')
+      break
+    case 10:
+      ship.stats.mastHP -= 6
+      damageSide -= 6
+      ship.stats.cornerCards = 0
+      nextShip()
+      console.log('CRASH! 6 to both. move ends. Possibly thrown from ship')
+      break
+  }
+}
+
+function shipDrift (ship) {
+  let end
+  let moveTween, angleTween
+
+  if (ship.stats.drift > 0) {
+    ship.stats.drift -= 1
+
+    // if our drift right isn't a wall, drift. Otherwise, hit the wall
+    if (ship.currentPosition.moves[2] !== 'wall') {
+      end = getPositionFromName(ship.currentPosition.moves[2])
+      handleCollision(ship, ship.currentPosition.name, end.name)
+      moveTween = game.add.tween(ship).to({ x: end.x, y: end.y }, 500, Phaser.Easing.Back.Out, true)
+      angleTween = game.add.tween(ship).to({ angle: end.angle }, 500, Phaser.Easing.Back.Out, true)
+      ship.currentPosition = end
+    } else {
+      wallTable(ship, 'right')
+      game.camera.shake(0.0125, 100)
+    }
+    // if we drifted, attempt to drift again
+    if (moveTween !== undefined) {
+      moveTween.onComplete.addOnce(function () {
+        shipDrift(currentShip, currentShip.currentPosition)
+      }, this)
+    }
+  } else if (ship.stats.drift === -1) {
+    // TODO: handle optional move in rule instead of this
+    if (ship.currentPosition.moves[0] !== 'wall') {
+      end = getPositionFromName(ship.currentPosition.moves[0])
+      handleCollision(ship, ship.currentPosition.name, end.name)
+      moveTween = game.add.tween(ship).to({ x: end.x, y: end.y }, 500, Phaser.Easing.Back.Out, true)
+      angleTween = game.add.tween(ship).to({ angle: end.angle }, 500, Phaser.Easing.Back.Out, true)
+      ship.currentPosition = end
+    } else {
+      console.log('Choosing not to slide into a wall')
+    }
+
+    // resolve a corner card if we have some, otherwise choose a new move
+    if (ship.stats.cornerCards > 0) {
+      resolveCorneringCards(ship)
+    } else {
+      chooseMove(currentShip)
+    }
+  } else {
+    if (ship.stats.cornerCards > 0) {
+      resolveCorneringCards(ship)
+    } else {
+      chooseMove(currentShip)
+    }
   }
 }
 
@@ -234,75 +388,37 @@ function shipMove (ship, starting, ending) {
   let end = getPositionFromName(ending)
   let moveTween
   console.log('moving ship: ', ship.key, start.name, end.name)
-  console.log('movement points: ' + ship.stats.movement)
 
-  // if there is a ship where we are moving, dispatch the ship collision signal
-  if (isShipPosition(end.name) === true) {
-    let rammed = getShipFromPosition(end.name)
-    console.log('detected ' + rammed.key + ' at: ' + rammed.currentPosition.name)
-    let location = hitLocation(start.name, end.name)
-    shipCollide.dispatch(location, rammed, ship)
-  }
+    // if there is a ship where we are moving, dispatch the ship collision signal
+  handleCollision(ship, start.name, end.name)
 
-  // update with new ship postion
+    // update with new ship postion
   ship.currentPosition = getPositionFromName(end.name)
 
-  // if we don't have any cornering cards already and we're not drifting
-  // then draw the right number of cornering cards
-  if (ship === currentShip && ship.stats.isDrifting === false) {
+    // if we don't have any cornering cards already and we're not drifting
+    // then draw the right number of cornering cards
+  if (ship === currentShip) {
+    console.log('movement points: ' + ship.stats.movement)
     ship.stats.cornerCards = speedCheck(ship)
-    console.log('corner cards: ' + ship.stats.cornerCards)
   }
 
-  // if we DO have some cornering cards left and we're not drifting
-  // resolve the next cornering card
-  if (ship.stats.cornerCards > 0) {
-    drawCorneringCards(ship)
-    console.log('drift: ' + ship.stats.drift)
-    console.log('corner cards: ' + ship.stats.cornerCards)
-  }
-
-  // ship movement animation
+    // ship movement animation
   moveTween = game.add.tween(ship).to({ x: end.x, y: end.y }, 500, Phaser.Easing.Back.Out, true)
   game.add.tween(ship).to({ angle: end.angle }, 500, Phaser.Easing.Back.Out, true)
 
-  // if the ship being moved is our current ship, choose move again when animation is done
-  // if we're not drifting, let us choose our next move
-  if (ship === currentShip && ship.stats.isDrifting === false) {
+ // if we have corner cards left, resolve them. Otherwise, choose a new move if we have movement points
+  if (ship === currentShip && ship.stats.cornerCards > 0) {
     moveTween.onComplete.addOnce(function () {
-      chooseMove(currentShip)
+      resolveCorneringCards(ship)
     }, this)
-  } else if (ship === currentShip && ship.stats.isDrifting === true) {
-    // if we are drifting, update drift value and move the ship unless it's a wall, in which case resolve wall table
-    if (ship.stats.drift > 0) {
-      console.log('sliding out!')
-      ship.stats.drift -= 1
-
-      moveTween.onComplete.addOnce(function () {
-        if (ship.currentPosition.moves[2] !== 'wall') {
-          shipMove(ship, ending, ship.currentPosition.moves[2])
-        } else {
-          console.log('On the Wall table')
-          game.camera.shake(0.0125, 100)
-        }
-      })
-    } else if (ship.stats.drift === -1) {
-      console.log('move in!')
-      ship.stats.drift += 1
-
-      moveTween.onComplete.addOnce(function () {
-        if (ship.currentPosition.moves[1] !== 'wall') {
-          shipMove(ship, ending, ship.currentPosition.moves[1])
-        } else {
-          console.log('On the Wall table')
-          game.camera.shake(0.0125, 100)
-        }
-      })
-    } else if (ship.stats.movement > 0) {
-      moveTween.onComplete.addOnce(function () {
-        chooseMove(currentShip)
-      }, this)
-    }
+  } else if (ship === currentShip && ship.stats.movement > 0) {
+    moveTween.onComplete.addOnce(function () {
+      chooseMove(ship)
+    }, this)
+  } else if (currentShip.stats.movement === 0) {
+    moveTween.onComplete.addOnce(function () {
+      nextShip()
+    }, this)
   }
 }
 
@@ -328,6 +444,7 @@ function nextShip () {
 
   currentShip = nextShip
   currentShip.stats.movement = currentShip.stats.speed
+  console.log('+++ ' + currentShip.key + ' turn ' + '+++')
 
   chooseMove(currentShip)
 }
@@ -350,13 +467,13 @@ function chooseMove (ship) {
 
 // loops through the ghostGroup and looks for alphas
 function highlightSelectedGhost (ghostGroup, selection) {
-  // set all highlights to default
+    // set all highlights to default
   for (let i = 0; i < ghostGroup.children.length; i++) {
     let ghostShip = ghostGroup.children[i]
     ghostShip.alpha = 0.15
   }
 
-  // pick the correct highlight for selected ship
+    // pick the correct highlight for selected ship
   for (let i = 0; i < ghostGroup.children.length; i++) {
     let ghostShip = ghostGroup.children[i]
     if (selection === ghostShip.currentPosition.name) {
@@ -371,7 +488,7 @@ function toggleSelection (ship, ghostGroup) {
   let keyRight = game.input.keyboard.addKey(Phaser.Keyboard.RIGHT)
   let keyEnter = game.input.keyboard.addKey(Phaser.Keyboard.ENTER)
 
-  // make the first position the default move
+    // make the first position the default move
   let index = 0
   let currentSelection = ghostGroup.children[index]
   highlightSelectedGhost(ghostGroup, currentSelection.currentPosition.name)
@@ -395,8 +512,12 @@ function toggleSelection (ship, ghostGroup) {
     game.input.keyboard.removeKey(Phaser.Keyboard.LEFT)
     game.input.keyboard.removeKey(Phaser.Keyboard.RIGHT)
     game.input.keyboard.removeKey(Phaser.Keyboard.ENTER)
-    ship.stats.movement -= 1
-    shipMove(ship, ship.currentPosition.name, currentSelection.currentPosition.name)
+    if (ship.stats.movement > 0) {
+      ship.stats.movement -= 1
+      shipMove(ship, ship.currentPosition.name, currentSelection.currentPosition.name)
+    } else {
+      nextShip()
+    }
   })
 }
 
@@ -405,7 +526,7 @@ function displayPossibleMoves (ship) {
   let moves = getPossibleMoves(ship)
   let ghostGroup = game.add.group()
 
-  // iterate over all possible moves, adding a "ghost" ship in each position
+    // iterate over all possible moves, adding a "ghost" ship in each position
   _.forEach(moves, (ghostPosition) => {
     let position = getPositionFromName(ghostPosition)
     let ghostShip = game.add.sprite(position.x, position.y, ship.key)
@@ -413,7 +534,7 @@ function displayPossibleMoves (ship) {
     ghostShip.angle = position.angle
     ghostShip.currentPosition = getPositionFromName(ghostPosition)
 
-    // if there is a ship there, grey it out
+        // if there is a ship there, grey it out
     if (isShipPosition(position.name)) {
       let greyShip = getShipFromPosition(position.name)
       greyShip.alpha = 0.4
@@ -422,7 +543,7 @@ function displayPossibleMoves (ship) {
     ghostGroup.add(ghostShip)
   })
 
-  // position it just right
+    // position it just right
   game.world.sendToBack(ghostGroup)
   game.world.moveUp(ghostGroup)
   game.world.moveUp(ghostGroup)
@@ -438,13 +559,13 @@ function ramming (location, rammed, rammer) {
     moveIndex,
     position
 
-  console.log('ramming ship: ', rammed.key, rammed.currentPosition.name)
+    // console.log('ramming ship: ', rammed.key, rammed.currentPosition.name)
 
   position = rammed.currentPosition
-  console.log('direction: ', location)
+        // console.log('direction: ', location)
 
-  // if they hit from the front, they should be coming off a wall
-  // we bounce off that wall. Need to check the rear positions we'll move into
+    // if they hit from the front, they should be coming off a wall
+    // we bounce off that wall. Need to check the rear positions we'll move into
   if (location === 'front') {
     if (position.moves[3] === 'wall') {
       location = 'right'
@@ -453,34 +574,34 @@ function ramming (location, rammed, rammer) {
     }
   }
 
-  // need to calculate damge right here before the rear location changes to right or left for movement
+    // need to calculate damge right here before the rear location changes to right or left for movement
   doDamage(rammer, rammed, location)
 
-  // if it's from the rear there's a 50/50 chance of moving right or left
+    // if it's from the rear there's a 50/50 chance of moving right or left
   if (location === 'rear') {
     location = _.sample(['left', 'right'])
   }
 
-  console.log('new dir: ', location)
+    // console.log('new dir: ', location)
 
   if (location === 'left') {
-    // if hit from the left, move right
+        // if hit from the left, move right
     moveIndex = 3
   } else if (location === 'right') {
-    // if hit from the right, move left
+        // if hit from the right, move left
     moveIndex = 5
   }
 
   if (position.moves[moveIndex] === 'wall') {
-    // if hitting a wall, go back
+        // if hitting a wall, go back
     moveIndex = 4
   }
 
   moveTo = position.moves[moveIndex]
 
-  console.log('move index: ', moveIndex)
+    // console.log('move index: ', moveIndex)
 
-  console.log('move to: ', moveTo)
+    // console.log('move to: ', moveTo)
 
   if (moveTo !== 'wall') {
     game.time.events.add(100, function () {
