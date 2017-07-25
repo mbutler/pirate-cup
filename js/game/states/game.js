@@ -123,7 +123,7 @@ function drawCorneringCard (ship) {
   } else if (chance > 51 && chance <= 57) {
     console.log('May move in 1')
     ship.stats.drift = -1
-    shipDrift(ship)
+    moveIn(ship)
   } else if (chance > 57) {
     console.log('Slide out 3')
     ship.stats.drift = 3
@@ -332,6 +332,29 @@ function wallTable (ship, side) {
   }
 }
 
+function moveIn (ship) {
+  let end
+  let moveTween, angleTween
+
+  if (ship.currentPosition.moves[0] !== 'wall') {
+    end = getPositionFromName(ship.currentPosition.moves[0])
+    handleCollision(ship, ship.currentPosition.name, end.name)
+    moveTween = game.add.tween(ship).to({ x: end.x, y: end.y }, 500, Phaser.Easing.Back.Out, true)
+    angleTween = game.add.tween(ship).to({ angle: end.angle }, 500, Phaser.Easing.Back.Out, true)
+    ship.currentPosition = end
+  } else {
+    console.log('Choosing not to slide into a wall')
+  }
+
+    // resolve a corner card if we have some, otherwise choose a new move
+  if (ship.stats.cornerCards > 0) {
+    resolveCorneringCards(ship)
+  } else {
+    chooseMove(currentShip)
+  }
+}
+
+// handles drifting our ship to the right
 function shipDrift (ship) {
   let end
   let moveTween, angleTween
@@ -356,24 +379,7 @@ function shipDrift (ship) {
         shipDrift(currentShip, currentShip.currentPosition)
       }, this)
     }
-  } else if (ship.stats.drift === -1) {
-    // TODO: handle optional move in rule instead of this
-    if (ship.currentPosition.moves[0] !== 'wall') {
-      end = getPositionFromName(ship.currentPosition.moves[0])
-      handleCollision(ship, ship.currentPosition.name, end.name)
-      moveTween = game.add.tween(ship).to({ x: end.x, y: end.y }, 500, Phaser.Easing.Back.Out, true)
-      angleTween = game.add.tween(ship).to({ angle: end.angle }, 500, Phaser.Easing.Back.Out, true)
-      ship.currentPosition = end
-    } else {
-      console.log('Choosing not to slide into a wall')
-    }
-
-    // resolve a corner card if we have some, otherwise choose a new move
-    if (ship.stats.cornerCards > 0) {
-      resolveCorneringCards(ship)
-    } else {
-      chooseMove(currentShip)
-    }
+    // otherwise if we didn't drift, resolve another corner card if present or else choose another move
   } else {
     if (ship.stats.cornerCards > 0) {
       resolveCorneringCards(ship)
