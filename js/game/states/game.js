@@ -16,7 +16,7 @@ game.create = function () {
   islands = map.createLayer('Islands')
   track = game.add.sprite(0, 265, 'track')
 
-  redShip = makeShip('redShip', 'b14')
+  redShip = makeShip('redShip', 'a9')
   game.add.existing(redShip)
 
   blueShip = makeShip('blueShip', 'c15')
@@ -413,18 +413,20 @@ function shipMove (ship, starting, ending) {
   game.add.tween(ship).to({ angle: end.angle }, 500, Phaser.Easing.Back.Out, true)
 
  // if we have corner cards left, resolve them. Otherwise, choose a new move if we have movement points
-  if (ship === currentShip && ship.stats.cornerCards > 0) {
-    moveTween.onComplete.addOnce(function () {
-      resolveCorneringCards(ship)
-    }, this)
-  } else if (ship === currentShip && ship.stats.movement > 0) {
-    moveTween.onComplete.addOnce(function () {
-      chooseMove(ship)
-    }, this)
-  } else if (ship === currentShip && ship.stats.movement === 0) {
-    moveTween.onComplete.addOnce(function () {
-      nextShip()
-    }, this)
+  if (ship === currentShip) {
+    if (ship.stats.cornerCards > 0) {
+      moveTween.onComplete.addOnce(function () {
+        resolveCorneringCards(ship)
+      }, this)
+    } else if (ship.stats.movement > 0) {
+      moveTween.onComplete.addOnce(function () {
+        chooseMove(ship)
+      }, this)
+    } else if (ship.stats.movement === 0) {
+      moveTween.onComplete.addOnce(function () {
+        nextShip()
+      }, this)
+    }
   }
 }
 
