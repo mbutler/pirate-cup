@@ -6,7 +6,7 @@ const stats = require('./stats.js')
 
 let game = {},
   map, ocean, track, islands, blackShip, yellowShip, greenShip, redShip, blueShip, whiteShip, keyP, shipList = [],
-  shipCollide, currentShip
+  shipCollide, currentShip, textStack = []
 
 game.create = function () {
   game.physics.startSystem(Phaser.Physics.ARCADE)
@@ -105,6 +105,7 @@ function drawCorneringCard (ship) {
 
   if (chance <= 30) {
     console.log('Hold the corner')
+    textManager('Hold!', currentShip)
             // keep drawing 'hold the corners' until we can't
     if (ship.stats.cornerCards > 0) {
       drawCorneringCard(ship)
@@ -113,21 +114,25 @@ function drawCorneringCard (ship) {
     }
   } else if (chance > 30 && chance <= 45) {
     console.log('Slide out 1')
+    textManager('Drift 1!', currentShip)
     ship.stats.drift = 1
     shipDrift(ship)
   } else if (chance > 45 && chance <= 51) {
     console.log('Slide out 2')
+    textManager('Drift 2!', currentShip)
     ship.stats.drift = 2
     shipDrift(ship)
   } else if (chance > 51 && chance <= 57) {
-      console.log('May move in 1')
-      ship.stats.drift = -1
-      moveIn(ship)
-    } else if (chance > 57) {
-      console.log('Slide out 3')
-      ship.stats.drift = 3
-      shipDrift(ship)
-    }
+    console.log('May move in 1')
+    textManager('Move in!', currentShip)
+    ship.stats.drift = -1
+    moveIn(ship)
+  } else if (chance > 57) {
+    console.log('Slide out 3')
+    textManager('Drift 3!', currentShip)
+    ship.stats.drift = 3
+    shipDrift(ship)
+  }
 }
 
 // find the difference between the speed limit and our speed. That's how many cards we draw
@@ -202,13 +207,13 @@ function hitLocation (starting, ending) {
     direction = 'left'
   } else if (moveIndex === 5) {
         // if they are knocked back to the left, we get hit on the right
-      direction = 'right'
-    } else if (moveIndex === 3) {
+    direction = 'right'
+  } else if (moveIndex === 3) {
         // if they are knocked back to the right, we get hit on the left
-      direction = 'left'
-    } else {
-      direction = 'front'
-    }
+    direction = 'left'
+  } else {
+    direction = 'front'
+  }
 
   return direction
 }
@@ -221,16 +226,21 @@ function getPositionFromName (postionName) {
 function doDamage (rammer, rammed, location) {
   if (location === 'left') {
     rammed.stats.leftHP -= 6
+    textManager('-6', rammed)
             // console.log(rammed.key + ' now has ' + rammed.stats.leftHP + ' hp on left side')
     rammer.stats.rightHP -= 3
+    textManager('-3', rammed)
             // console.log(rammer.key + ' now has ' + rammer.stats.rightHP + ' hp on right side')
   } else if (location === 'right') {
     rammed.stats.rightHP -= 6
+    textManager('-6', rammed)
             // console.log(rammed.key + ' now has ' + rammed.stats.rightHP + ' hp on right side')
     rammer.stats.leftHP -= 3
+    textManager('-3', rammed)
             // console.log(rammer.key + ' now has ' + rammer.stats.leftHP + ' hp on left side')
   } else if (location === 'rear') {
     rammed.stats.rearHP -= 6
+    textManager('-6', rammed)
             // console.log(rammed.key + ' now has ' + rammed.stats.rearHP + ' hp on rear side')
     rammer.stats.mastHP -= 4
     rammer.stats.frontHP -= 2
@@ -265,12 +275,14 @@ function wallTable (ship, side) {
       ship.stats.cornerCards = 0
       chooseMove(ship)
       console.log(' 3 wall damage to ' + damageSide)
+      textManager('-3 ' + damageSide, ship)
       break
     case 2:
       ship.stats.mastHP -= 3
       ship.stats.cornerCards = 0
       chooseMove(ship)
       console.log(' 3 wall damage to ' + damageSide)
+      textManager('-3 ' + damageSide, ship)
       break
     case 3:
       ship.stats.mastHP -= 3
@@ -278,6 +290,7 @@ function wallTable (ship, side) {
       ship.stats.cornerCards = 0
       chooseMove(ship)
       console.log('3 to both')
+      textManager('-3 ' + damageSide + ' and mast', ship)
       break
     case 4:
       ship.stats.mastHP -= 3
@@ -285,6 +298,7 @@ function wallTable (ship, side) {
       ship.stats.cornerCards = 0
       chooseMove(ship)
       console.log('3 to both')
+      textManager('-3 ' + damageSide + ' and mast', ship)
       break
     case 5:
       ship.stats.mastHP -= 3
@@ -292,6 +306,7 @@ function wallTable (ship, side) {
       ship.stats.cornerCards = 0
       chooseMove(ship)
       console.log('3 to both')
+      textManager('-3 ' + damageSide + ' and mast', ship)
       break
     case 6:
       ship.stats.mastHP -= 6
@@ -299,6 +314,7 @@ function wallTable (ship, side) {
       ship.stats.cornerCards = 0
       chooseMove(ship)
       console.log('6 to both')
+      textManager('-6 ' + damageSide + ' and mast', ship)
       break
     case 7:
       ship.stats.mastHP -= 6
@@ -306,6 +322,7 @@ function wallTable (ship, side) {
       ship.stats.cornerCards = 0
       nextShip()
       console.log('CRASH! 6 to both. move ends')
+      textManager('CRASH!!', ship)
       break
     case 8:
       ship.stats.mastHP -= 6
@@ -313,6 +330,7 @@ function wallTable (ship, side) {
       ship.stats.cornerCards = 0
       nextShip()
       console.log('CRASH! 6 to both. move ends. Possibly thrown from ship')
+      textManager('CRASH!!', ship)
       break
     case 9:
       ship.stats.mastHP -= 6
@@ -320,6 +338,7 @@ function wallTable (ship, side) {
       ship.stats.cornerCards = 0
       nextShip()
       console.log('CRASH! 6 to both. move ends. Possibly thrown from ship')
+      textManager('CRASH!!', ship)
       break
     case 10:
       ship.stats.mastHP -= 6
@@ -327,6 +346,7 @@ function wallTable (ship, side) {
       ship.stats.cornerCards = 0
       nextShip()
       console.log('CRASH! 6 to both. move ends. Possibly thrown from ship')
+      textManager('CRASH!!', ship)
       break
   }
 }
@@ -334,6 +354,8 @@ function wallTable (ship, side) {
 function moveIn (ship) {
   let end
   let moveTween, angleTween
+
+  textStack = []
 
   if (ship.stats.drift === -1) {
     ship.stats.drift += 1
@@ -369,6 +391,8 @@ function moveIn (ship) {
 function shipDrift (ship) {
   let end
   let moveTween, angleTween
+
+  textStack = []
 
   if (ship.stats.drift > 0) {
     ship.stats.drift -= 1
@@ -406,6 +430,8 @@ function shipMove (ship, starting, ending) {
   let moveTween
   console.log('moving ship: ', ship.key, start.name, end.name)
 
+  textStack = []
+
     // if there is a ship where we are moving, dispatch the ship collision signal
   handleCollision(ship, start.name, end.name)
 
@@ -431,13 +457,13 @@ function shipMove (ship, starting, ending) {
       }, this)
     } else if (ship.stats.movement > 0) {
       moveTween.onComplete.addOnce(function () {
-          chooseMove(ship)
-        }, this)
+        chooseMove(ship)
+      }, this)
     } else if (ship.stats.movement === 0) {
-        moveTween.onComplete.addOnce(function () {
-            nextShip()
-          }, this)
-      }
+      moveTween.onComplete.addOnce(function () {
+        nextShip()
+      }, this)
+    }
   }
 }
 
@@ -474,7 +500,7 @@ function chooseMove (ship) {
     ship.animations.play('normal', true)
     ship.alpha = 1
     ship.stats.isDrifting = false
-  })
+  })  
 
   if (ship.stats.movement > 0) {
     let ghostGroup = displayPossibleMoves(ship)
@@ -628,6 +654,22 @@ function ramming (location, rammed, rammer) {
       shipMove(rammed, rammed.currentPosition.name, moveTo)
     }, this)
   }
+}
+
+function textManager (msg, ship) {
+  textStack.push(msg)
+  console.log(textStack)
+  let align = 25
+  let style = { font: 'bold 14px Arial', fill: '#f7ef0e', boundsAlignH: 'center', boundsAlignV: 'middle', stroke: '#000', strokeThickness: 2 }
+
+  _.forEachRight(textStack, (words) => {
+    let text = game.add.text(ship.x, ship.y - align, words, style)
+    text.anchor.setTo(0.5, 0.5)
+    game.time.events.add(10, function () {
+      game.add.tween(text).to({alpha: 0}, 1000, Phaser.Easing.Linear.None, true)
+    }, this)
+    align += 25
+  })  
 }
 
 game.update = function () {
