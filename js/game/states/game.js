@@ -85,8 +85,7 @@ function test () {
     // shipMove(blackShip, 'c32', 'c33')
     // currentShip.animations.play('stroke', true)
     // nextShip()
-  currentShip.stats.drift = 1
-  shipDrift(currentShip)
+  moveIn(currentShip)
 }
 
 function resolveCorneringCards (ship) {
@@ -106,7 +105,7 @@ function drawCorneringCard (ship) {
 
   if (chance <= 30) {
     console.log('Hold the corner')
-    // keep drawing 'hold the corners' until we can't
+            // keep drawing 'hold the corners' until we can't
     if (ship.stats.cornerCards > 0) {
       drawCorneringCard(ship)
     } else {
@@ -121,14 +120,14 @@ function drawCorneringCard (ship) {
     ship.stats.drift = 2
     shipDrift(ship)
   } else if (chance > 51 && chance <= 57) {
-    console.log('May move in 1')
-    ship.stats.drift = -1
-    moveIn(ship)
-  } else if (chance > 57) {
-    console.log('Slide out 3')
-    ship.stats.drift = 3
-    shipDrift(ship)
-  }
+      console.log('May move in 1')
+      ship.stats.drift = -1
+      moveIn(ship)
+    } else if (chance > 57) {
+      console.log('Slide out 3')
+      ship.stats.drift = 3
+      shipDrift(ship)
+    }
 }
 
 // find the difference between the speed limit and our speed. That's how many cards we draw
@@ -203,13 +202,13 @@ function hitLocation (starting, ending) {
     direction = 'left'
   } else if (moveIndex === 5) {
         // if they are knocked back to the left, we get hit on the right
-    direction = 'right'
-  } else if (moveIndex === 3) {
+      direction = 'right'
+    } else if (moveIndex === 3) {
         // if they are knocked back to the right, we get hit on the left
-    direction = 'left'
-  } else {
-    direction = 'front'
-  }
+      direction = 'left'
+    } else {
+      direction = 'front'
+    }
 
   return direction
 }
@@ -336,21 +335,33 @@ function moveIn (ship) {
   let end
   let moveTween, angleTween
 
-  if (ship.currentPosition.moves[0] !== 'wall') {
-    end = getPositionFromName(ship.currentPosition.moves[0])
-    handleCollision(ship, ship.currentPosition.name, end.name)
-    moveTween = game.add.tween(ship).to({ x: end.x, y: end.y }, 500, Phaser.Easing.Back.Out, true)
-    angleTween = game.add.tween(ship).to({ angle: end.angle }, 500, Phaser.Easing.Back.Out, true)
-    ship.currentPosition = end
-  } else {
-    console.log('Choosing not to slide into a wall')
-  }
+  if (ship.stats.drift === -1) {
+    ship.stats.drift += 1
 
-    // resolve a corner card if we have some, otherwise choose a new move
-  if (ship.stats.cornerCards > 0) {
-    resolveCorneringCards(ship)
+        // if our drift right isn't a wall, drift. Otherwise, hit the wall
+    if (ship.currentPosition.moves[0] !== 'wall') {
+      end = getPositionFromName(ship.currentPosition.moves[0])
+      handleCollision(ship, ship.currentPosition.name, end.name)
+      moveTween = game.add.tween(ship).to({ x: end.x, y: end.y }, 500, Phaser.Easing.Back.Out, true)
+      angleTween = game.add.tween(ship).to({ angle: end.angle }, 500, Phaser.Easing.Back.Out, true)
+      ship.currentPosition = end
+    } else {
+      wallTable(ship, 'left')
+      game.camera.shake(0.0125, 100)
+    }
+    // if we drifted, attempt to drift again
+    if (moveTween !== undefined) {
+      moveTween.onComplete.addOnce(function () {
+        shipDrift(currentShip, currentShip.currentPosition)
+      }, this)
+    }
+        // otherwise if we didn't drift, resolve another corner card if present or else choose another move
   } else {
-    chooseMove(currentShip)
+    if (ship.stats.cornerCards > 0) {
+      resolveCorneringCards(ship)
+    } else {
+      chooseMove(currentShip)
+    }
   }
 }
 
@@ -362,7 +373,7 @@ function shipDrift (ship) {
   if (ship.stats.drift > 0) {
     ship.stats.drift -= 1
 
-    // if our drift right isn't a wall, drift. Otherwise, hit the wall
+        // if our drift right isn't a wall, drift. Otherwise, hit the wall
     if (ship.currentPosition.moves[2] !== 'wall') {
       end = getPositionFromName(ship.currentPosition.moves[2])
       handleCollision(ship, ship.currentPosition.name, end.name)
@@ -373,13 +384,13 @@ function shipDrift (ship) {
       wallTable(ship, 'right')
       game.camera.shake(0.0125, 100)
     }
-    // if we drifted, attempt to drift again
+        // if we drifted, attempt to drift again
     if (moveTween !== undefined) {
       moveTween.onComplete.addOnce(function () {
         shipDrift(currentShip, currentShip.currentPosition)
       }, this)
     }
-    // otherwise if we didn't drift, resolve another corner card if present or else choose another move
+        // otherwise if we didn't drift, resolve another corner card if present or else choose another move
   } else {
     if (ship.stats.cornerCards > 0) {
       resolveCorneringCards(ship)
@@ -412,7 +423,7 @@ function shipMove (ship, starting, ending) {
   moveTween = game.add.tween(ship).to({ x: end.x, y: end.y }, 500, Phaser.Easing.Back.Out, true)
   game.add.tween(ship).to({ angle: end.angle }, 500, Phaser.Easing.Back.Out, true)
 
- // if we have corner cards left, resolve them. Otherwise, choose a new move if we have movement points
+    // if we have corner cards left, resolve them. Otherwise, choose a new move if we have movement points
   if (ship === currentShip) {
     if (ship.stats.cornerCards > 0) {
       moveTween.onComplete.addOnce(function () {
@@ -420,13 +431,13 @@ function shipMove (ship, starting, ending) {
       }, this)
     } else if (ship.stats.movement > 0) {
       moveTween.onComplete.addOnce(function () {
-        chooseMove(ship)
-      }, this)
+          chooseMove(ship)
+        }, this)
     } else if (ship.stats.movement === 0) {
-      moveTween.onComplete.addOnce(function () {
-        nextShip()
-      }, this)
-    }
+        moveTween.onComplete.addOnce(function () {
+            nextShip()
+          }, this)
+      }
   }
 }
 
