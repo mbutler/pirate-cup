@@ -9,7 +9,8 @@ let stats = {
   speed: 8,
   movement: 0,
   drift: 0,
-  cornerCards: 0
+  cornerCards: 0,
+  floggingCards: 6
 }
 
 module.exports = stats

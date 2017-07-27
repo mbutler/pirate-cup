@@ -77,12 +77,85 @@ function makeShip (name, startingPositionName) {
 }
 
 function test () {
-  moveIn(currentShip)
+  drawFloggingCard(currentShip)
+  console.log(currentShip.stats)
 }
 
 function resolveCorneringCards (ship) {
   if (ship.stats.cornerCards > 0) {
     drawCorneringCard(ship)
+  }
+}
+
+function drawFloggingCard (ship) {
+  let chance = _.random(1, 60)
+
+  console.log('drawing flogging card: ' + chance)
+
+  ship.stats.floggingCards -= 1
+  console.log('flogging cards: ' + ship.stats.floggingCards)
+
+  if (chance <= 3) {
+    console.log('3 to ship, 1 to mast')
+    ship.stats.frontHP -= 3
+    ship.stats.mastHP -= 1
+    textStack.push('-4')
+    textManager(ship)
+  } else if (chance > 3 && chance <= 6) {
+    console.log('3 to ship')
+    ship.stats.frontHP -= 3
+    textStack.push('-3')
+    textManager(ship)
+  } else if (chance > 6 && chance <= 9) {
+    console.log('2 to ship, 1 to mast')
+    ship.stats.frontHP -= 3
+    ship.stats.mastHP -= 1
+    textStack.push('-3')
+    textManager(ship)
+  } else if (chance > 9 && chance <= 21) {
+    console.log('1 space, 1 to mast')
+    ship.stats.mastHP -= 1
+    textStack.push('-1')
+    textManager(ship)
+    ship.stats.movement = 1
+    chooseMove(ship)
+  } else if (chance > 21 && chance <= 24) {
+    console.log('2 to ship')
+    ship.stats.frontHP -= 2
+    textStack.push('-2')
+    textManager(ship)
+  } else if (chance > 24 && chance <= 39) {
+    console.log('1 space')
+    ship.stats.movement = 1
+    chooseMove(ship)
+  } else if (chance > 39 && chance <= 42) {
+    console.log('1 to ship')
+    ship.stats.frontHP -= 1
+    textStack.push('-1')
+    textManager(ship)
+  } else if (chance > 42 && chance <= 45) {
+    console.log('2 spaces, turn ends')
+    ship.stats.floggingCards = 0
+    ship.stats.movement = 2
+    chooseMove(ship)
+  } else if (chance > 45 && chance <= 48) {
+    console.log('2 spaces')
+    ship.stats.movement = 2
+    chooseMove(ship)
+  } else if (chance > 48 && chance <= 51) {
+    console.log('1 space, turn end')
+    ship.stats.floggingCards = 0
+    ship.stats.movement = 1
+  } else if (chance > 51 && chance <= 54) {
+    console.log('1 to ship, 1 to mast')
+    ship.stats.frontHP -= 1
+    ship.stats.mastHP -= 1
+    textStack.push('-2')
+    textManager(ship)
+  } else if (chance > 54) {
+    console.log('MUTINY!!')
+    textStack.push('MUTINY!!')
+    textManager(ship)
   }
 }
 
@@ -466,10 +539,19 @@ function shipMove (ship, starting, ending) {
       }, this)
     } else if (ship.stats.movement === 0) {
       moveTween.onComplete.addOnce(() => {
-        nextShip()
+        if (ship.stats.floggingCards > 0) {
+          tryFlogging(ship)
+        } else {
+          nextShip()
+        }
       }, this)
     }
   }
+}
+
+function tryFlogging (ship) {
+  console.log('Do you want to flog? No? Ok.')
+  nextShip()
 }
 
 // returns an array of all possible moves for a ship
