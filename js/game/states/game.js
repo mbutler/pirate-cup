@@ -25,18 +25,17 @@ game.create = function () {
   blackShip = makeShip('blackShip', 'd16')
   game.add.existing(blackShip)
 
-    // greenShip = makeShip('greenShip', 'c40')
-    // game.add.existing(greenShip)
+  greenShip = makeShip('greenShip', 'c40')
+  game.add.existing(greenShip)
 
-    // yellowShip = makeShip('yellowShip', 'd1')
-    // game.add.existing(yellowShip)
+  yellowShip = makeShip('yellowShip', 'd1')
+  game.add.existing(yellowShip)
 
-    // whiteShip = makeShip('whiteShip', 'a30')
-    // game.add.existing(whiteShip)
+  whiteShip = makeShip('whiteShip', 'a30')
+  game.add.existing(whiteShip)
 
-    // shipList.push(redShip, blueShip, blackShip, greenShip, yellowShip, whiteShip)
-  shipList.push(redShip, blueShip, blackShip)
-
+  shipList.push(redShip, blueShip, blackShip, greenShip, yellowShip, whiteShip)
+  
   map.addTilesetImage('tile_01', 'tile_01')
   map.addTilesetImage('tile_17', 'tile_17')
   map.addTilesetImage('tile_33', 'tile_33')
@@ -104,32 +103,37 @@ function drawCorneringCard (ship) {
   console.log('corner cards: ' + ship.stats.cornerCards)
 
   if (chance <= 30) {
-    console.log('Hold the corner')
-    textManager('Hold!', currentShip)
-            // keep drawing 'hold the corners' until we can't
+    console.log('Hold the corner')    
+    textStack.push('Hold!')
+    // keep drawing 'hold the corners' until we can't
     if (ship.stats.cornerCards > 0) {
       drawCorneringCard(ship)
     } else {
+      textManager(ship)
       chooseMove(ship)
     }
   } else if (chance > 30 && chance <= 45) {
     console.log('Slide out 1')
-    textManager('Drift 1!', currentShip)
+    textStack.push('Drift 1')
+    // textManager('Drift 1!', currentShip)
     ship.stats.drift = 1
     shipDrift(ship)
   } else if (chance > 45 && chance <= 51) {
     console.log('Slide out 2')
-    textManager('Drift 2!', currentShip)
+    textStack.push('Drift 2')
+    // textManager('Drift 2!', currentShip)
     ship.stats.drift = 2
     shipDrift(ship)
   } else if (chance > 51 && chance <= 57) {
     console.log('May move in 1')
-    textManager('Move in!', currentShip)
+    textStack.push('Move in')
+    // textManager('Move in!', currentShip)
     ship.stats.drift = -1
     moveIn(ship)
   } else if (chance > 57) {
     console.log('Slide out 3')
-    textManager('Drift 3!', currentShip)
+    textStack.push('Drift 3')
+    // textManager('Drift 3!', currentShip)
     ship.stats.drift = 3
     shipDrift(ship)
   }
@@ -138,6 +142,7 @@ function drawCorneringCard (ship) {
 // find the difference between the speed limit and our speed. That's how many cards we draw
 function speedCheck (ship) {
   let cards = 0
+
   if (ship.currentPosition.speed !== undefined) {
     if (ship.stats.speed > ship.currentPosition.speed) {
       console.log('going too fast!')
@@ -226,24 +231,31 @@ function getPositionFromName (postionName) {
 function doDamage (rammer, rammed, location) {
   if (location === 'left') {
     rammed.stats.leftHP -= 6
-    textManager('-6', rammed)
+    textStack.push('-6')
+    textManager(rammed)
             // console.log(rammed.key + ' now has ' + rammed.stats.leftHP + ' hp on left side')
     rammer.stats.rightHP -= 3
-    textManager('-3', rammed)
+    textStack.push('-3')
+    textManager(rammer)
             // console.log(rammer.key + ' now has ' + rammer.stats.rightHP + ' hp on right side')
   } else if (location === 'right') {
     rammed.stats.rightHP -= 6
+    textStack.push('-6')
     textManager('-6', rammed)
             // console.log(rammed.key + ' now has ' + rammed.stats.rightHP + ' hp on right side')
     rammer.stats.leftHP -= 3
-    textManager('-3', rammed)
+    textStack.push('-3')
+    textManager(rammer)
             // console.log(rammer.key + ' now has ' + rammer.stats.leftHP + ' hp on left side')
   } else if (location === 'rear') {
     rammed.stats.rearHP -= 6
-    textManager('-6', rammed)
+   textStack.push('-6')
+    textManager(rammed)
             // console.log(rammed.key + ' now has ' + rammed.stats.rearHP + ' hp on rear side')
     rammer.stats.mastHP -= 4
     rammer.stats.frontHP -= 2
+    textStack.push('-6')
+    textManager(rammer)
             // console.log(rammer.key + ' now has ' + rammer.stats.mastHP + ' hp on mast and ' + rammer.stats.frontHP + ' on front')
   }
 }
@@ -275,14 +287,16 @@ function wallTable (ship, side) {
       ship.stats.cornerCards = 0
       chooseMove(ship)
       console.log(' 3 wall damage to ' + damageSide)
-      textManager('-3 ' + damageSide, ship)
+      // textManager('-3 ' + side, ship)
+      textStack.push('-3 ' + side)
       break
     case 2:
       ship.stats.mastHP -= 3
       ship.stats.cornerCards = 0
       chooseMove(ship)
       console.log(' 3 wall damage to ' + damageSide)
-      textManager('-3 ' + damageSide, ship)
+      // textManager('-3 ' + side, ship)
+      textStack.push('-3 ' + side)
       break
     case 3:
       ship.stats.mastHP -= 3
@@ -290,7 +304,8 @@ function wallTable (ship, side) {
       ship.stats.cornerCards = 0
       chooseMove(ship)
       console.log('3 to both')
-      textManager('-3 ' + damageSide + ' and mast', ship)
+      // textManager('-3 ' + side + ' and mast', ship)
+      textStack.push('-3 ' + side + ' and mast')
       break
     case 4:
       ship.stats.mastHP -= 3
@@ -298,7 +313,8 @@ function wallTable (ship, side) {
       ship.stats.cornerCards = 0
       chooseMove(ship)
       console.log('3 to both')
-      textManager('-3 ' + damageSide + ' and mast', ship)
+      // textManager('-3 ' + side + ' and mast', ship)
+      textStack.push('-3 ' + side + ' and mast')
       break
     case 5:
       ship.stats.mastHP -= 3
@@ -306,7 +322,8 @@ function wallTable (ship, side) {
       ship.stats.cornerCards = 0
       chooseMove(ship)
       console.log('3 to both')
-      textManager('-3 ' + damageSide + ' and mast', ship)
+      // textManager('-3 ' + side + ' and mast', ship)
+      textStack.push('-3 ' + side + ' and mast')
       break
     case 6:
       ship.stats.mastHP -= 6
@@ -314,7 +331,8 @@ function wallTable (ship, side) {
       ship.stats.cornerCards = 0
       chooseMove(ship)
       console.log('6 to both')
-      textManager('-6 ' + damageSide + ' and mast', ship)
+      // textManager('-6 ' + side + ' and mast', ship)
+      textStack.push('-6 ' + side + ' and mast')
       break
     case 7:
       ship.stats.mastHP -= 6
@@ -322,7 +340,8 @@ function wallTable (ship, side) {
       ship.stats.cornerCards = 0
       nextShip()
       console.log('CRASH! 6 to both. move ends')
-      textManager('CRASH!!', ship)
+      // textManager('CRASH!!', ship)
+      textStack.push('CRASH!!')
       break
     case 8:
       ship.stats.mastHP -= 6
@@ -330,7 +349,8 @@ function wallTable (ship, side) {
       ship.stats.cornerCards = 0
       nextShip()
       console.log('CRASH! 6 to both. move ends. Possibly thrown from ship')
-      textManager('CRASH!!', ship)
+      // textManager('CRASH!!', ship)
+      textStack.push('CRASH!!')
       break
     case 9:
       ship.stats.mastHP -= 6
@@ -338,15 +358,16 @@ function wallTable (ship, side) {
       ship.stats.cornerCards = 0
       nextShip()
       console.log('CRASH! 6 to both. move ends. Possibly thrown from ship')
-      textManager('CRASH!!', ship)
+     //  textManager('CRASH!!', ship)
+     textStack.push('CRASH!!')
       break
     case 10:
       ship.stats.mastHP -= 6
       damageSide -= 6
       ship.stats.cornerCards = 0
       nextShip()
-      console.log('CRASH! 6 to both. move ends. Possibly thrown from ship')
-      textManager('CRASH!!', ship)
+      console.log('CRASH! 6 to both. move ends. Possibly thrown from ship')      
+      textStack.push('CRASH!!')
       break
   }
 }
@@ -355,6 +376,7 @@ function moveIn (ship) {
   let end
   let moveTween, angleTween
 
+  textManager(ship)
   textStack = []
 
   if (ship.stats.drift === -1) {
@@ -369,6 +391,7 @@ function moveIn (ship) {
       ship.currentPosition = end
     } else {
       wallTable(ship, 'left')
+      textManager(ship)
       game.camera.shake(0.0125, 100)
     }
     // if we drifted, attempt to drift again
@@ -392,6 +415,7 @@ function shipDrift (ship) {
   let end
   let moveTween, angleTween
 
+  textManager(ship)
   textStack = []
 
   if (ship.stats.drift > 0) {
@@ -406,6 +430,7 @@ function shipDrift (ship) {
       ship.currentPosition = end
     } else {
       wallTable(ship, 'right')
+      textManager(ship)
       game.camera.shake(0.0125, 100)
     }
         // if we drifted, attempt to drift again
@@ -500,7 +525,7 @@ function chooseMove (ship) {
     ship.animations.play('normal', true)
     ship.alpha = 1
     ship.stats.isDrifting = false
-  })  
+  })
 
   if (ship.stats.movement > 0) {
     let ghostGroup = displayPossibleMoves(ship)
@@ -557,6 +582,7 @@ function toggleSelection (ship, ghostGroup) {
     game.input.keyboard.removeKey(Phaser.Keyboard.LEFT)
     game.input.keyboard.removeKey(Phaser.Keyboard.RIGHT)
     game.input.keyboard.removeKey(Phaser.Keyboard.ENTER)
+
     if (ship.stats.movement > 0) {
       ship.stats.movement -= 1
       shipMove(ship, ship.currentPosition.name, currentSelection.currentPosition.name)
@@ -656,20 +682,32 @@ function ramming (location, rammed, rammer) {
   }
 }
 
-function textManager (msg, ship) {
-  textStack.push(msg)
-  console.log(textStack)
+function textManager (ship) {
   let align = 25
+  let holdCounter = 0
+  let holdText
   let style = { font: 'bold 14px Arial', fill: '#f7ef0e', boundsAlignH: 'center', boundsAlignV: 'middle', stroke: '#000', strokeThickness: 2 }
 
+  // if there are multiple holds in the stack, use a multiplier text
+  _.forEach(textStack, (hold) => {
+    if (hold === 'Hold!') {
+      holdCounter++
+    }
+  })
+
+  if (holdCounter > 1) {
+    holdText = 'Hold x' + holdCounter
+    _.pull(textStack, 'Hold!')
+    textStack.push(holdText)
+  }
   _.forEachRight(textStack, (words) => {
     let text = game.add.text(ship.x, ship.y - align, words, style)
     text.anchor.setTo(0.5, 0.5)
-    game.time.events.add(10, function () {
+    game.time.events.add(100, function () {
       game.add.tween(text).to({alpha: 0}, 1000, Phaser.Easing.Linear.None, true)
     }, this)
     align += 25
-  })  
+  })
 }
 
 game.update = function () {
