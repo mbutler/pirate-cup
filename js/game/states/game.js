@@ -117,8 +117,7 @@ function drawFloggingCard (ship) {
     ship.stats.mastHP -= 1
     textStack.push('-1')
     textManager(ship)
-    ship.stats.movement = 1
-    chooseMove(ship)
+    ship.stats.movement = 1    
   } else if (chance > 21 && chance <= 24) {
     console.log('2 to ship')
     ship.stats.frontHP -= 2
@@ -126,8 +125,7 @@ function drawFloggingCard (ship) {
     textManager(ship)
   } else if (chance > 24 && chance <= 39) {
     console.log('1 space')
-    ship.stats.movement = 1
-    chooseMove(ship)
+    ship.stats.movement = 1    
   } else if (chance > 39 && chance <= 42) {
     console.log('1 to ship')
     ship.stats.frontHP -= 1
@@ -137,15 +135,19 @@ function drawFloggingCard (ship) {
     console.log('2 spaces, turn ends')
     ship.stats.floggingCards = 0
     ship.stats.movement = 2
-    chooseMove(ship)
+    textStack.push('2 spaces, turn ends')
+    textManager(ship)    
   } else if (chance > 45 && chance <= 48) {
     console.log('2 spaces')
     ship.stats.movement = 2
-    chooseMove(ship)
+    textStack.push('2 spaces')
+    textManager(ship)    
   } else if (chance > 48 && chance <= 51) {
     console.log('1 space, turn end')
     ship.stats.floggingCards = 0
     ship.stats.movement = 1
+    textStack.push('1 space, turn ends')
+    textManager(ship)
   } else if (chance > 51 && chance <= 54) {
     console.log('1 to ship, 1 to mast')
     ship.stats.frontHP -= 1
@@ -156,6 +158,20 @@ function drawFloggingCard (ship) {
     console.log('MUTINY!!')
     textStack.push('MUTINY!!')
     textManager(ship)
+  }
+
+  if (ship.stats.floggingCards > 0) {
+    if (ship.stats.movement === 0) {
+      tryFlogging(ship)
+    } else if (ship.stats.movement > 0) {
+      chooseMove(ship)
+    }  
+  } else if (ship.stats.floggingCards === 0) {
+    if (ship.stats.movement === 0) {
+      nextShip()
+    } else if (ship.stats.movement > 0) {
+      chooseMove(ship)
+    }  
   }
 }
 
@@ -506,7 +522,7 @@ function shipMove (ship, starting, ending) {
   let start = getPositionFromName(starting)
   let end = getPositionFromName(ending)
   let moveTween
-  console.log('moving ship: ', ship.key, start.name, end.name)
+  console.log('moving ship: ', ship.key, start.name, end.name)  
 
   textStack = []
 
@@ -541,7 +557,7 @@ function shipMove (ship, starting, ending) {
       moveTween.onComplete.addOnce(() => {
         if (ship.stats.floggingCards > 0) {
           tryFlogging(ship)
-        } else {
+        } else if (ship.stats.floggingCards === 0) {
           nextShip()
         }
       }, this)
@@ -550,8 +566,56 @@ function shipMove (ship, starting, ending) {
 }
 
 function tryFlogging (ship) {
-  console.log('Do you want to flog? No? Ok.')
-  nextShip()
+  let style = { font: 'bold 58px Arial', fill: '#e0300d', boundsAlignH: 'center', boundsAlignV: 'middle', stroke: '#000', strokeThickness: 4 }
+  let selectedStyle = { font: 'bold 58px Arial', fill: '#f2ca02', boundsAlignH: 'center', boundsAlignV: 'middle', stroke: '#000', strokeThickness: 4 }
+  let regularStyle = { font: 'bold 48px Arial', fill: '#000000', boundsAlignH: 'center', boundsAlignV: 'middle' }
+  
+  let msg = 'Flog rowers?'
+  let text = game.add.text(725, 340, msg, style)
+  let noText = game.add.text(1020, 450, 'NO', regularStyle)
+  let yesText = game.add.text(725, 440, 'YES', selectedStyle)
+
+  let keyLeft = game.input.keyboard.addKey(Phaser.Keyboard.LEFT)
+  let keyRight = game.input.keyboard.addKey(Phaser.Keyboard.RIGHT)
+  let keyEnter = game.input.keyboard.addKey(Phaser.Keyboard.ENTER)
+
+  let flog = true
+
+  textStack = []
+
+  keyLeft.onDown.add(() => {
+    yesText.setStyle(selectedStyle)
+    noText.setStyle(regularStyle)
+    flog = true
+  })
+
+  keyRight.onDown.add(() => {
+    noText.setStyle(selectedStyle)
+    yesText.setStyle(regularStyle)
+    flog = false
+  })
+
+  keyEnter.onDown.add(() => {
+    if (flog === true) {
+      game.input.keyboard.removeKey(Phaser.Keyboard.LEFT)
+      game.input.keyboard.removeKey(Phaser.Keyboard.RIGHT)
+      game.input.keyboard.removeKey(Phaser.Keyboard.ENTER)
+      text.destroy()
+      noText.destroy()
+      yesText.destroy()
+      drawFloggingCard(ship)      
+    } else if (flog === false) {
+      game.input.keyboard.removeKey(Phaser.Keyboard.LEFT)
+      game.input.keyboard.removeKey(Phaser.Keyboard.RIGHT)
+      game.input.keyboard.removeKey(Phaser.Keyboard.ENTER)
+      text.destroy()
+      noText.destroy()
+      yesText.destroy()
+      nextShip()
+    }
+  })
+  
+  //nextShip()
 }
 
 // returns an array of all possible moves for a ship
@@ -577,6 +641,7 @@ function nextShip () {
 
   currentShip = nextShip
   currentShip.stats.movement = currentShip.stats.speed
+  currentShip.stats.floggingCards = 6
   console.log('+++ ' + currentShip.key + ' turn ' + '+++')
 
   chooseMove(currentShip)
@@ -592,6 +657,8 @@ function chooseMove (ship) {
   if (ship.stats.movement > 0) {
     let ghostGroup = displayPossibleMoves(ship)
     toggleSelection(ship, ghostGroup)
+  } else if (ship.stats.floggingCards > 0) {
+    tryFlogging(ship)
   } else {
     nextShip()
   }
