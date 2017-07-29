@@ -77,8 +77,8 @@ function makeShip (name, startingPositionName) {
 }
 
 function test () {
-  drawFloggingCard(currentShip)
-  console.log(currentShip.stats)
+  // drawFloggingCard(currentShip)
+  console.log(game)
 }
 
 function resolveCorneringCards (ship) {
@@ -88,7 +88,8 @@ function resolveCorneringCards (ship) {
 }
 
 function drawFloggingCard (ship) {
-  let chance = _.random(1, 60)
+  // let chance = _.random(1, 60)
+  let chance = 60
 
   console.log('drawing flogging card: ' + chance)
 
@@ -117,7 +118,7 @@ function drawFloggingCard (ship) {
     ship.stats.mastHP -= 1
     textStack.push('-1')
     textManager(ship)
-    ship.stats.movement = 1    
+    ship.stats.movement = 1
   } else if (chance > 21 && chance <= 24) {
     console.log('2 to ship')
     ship.stats.frontHP -= 2
@@ -125,7 +126,7 @@ function drawFloggingCard (ship) {
     textManager(ship)
   } else if (chance > 24 && chance <= 39) {
     console.log('1 space')
-    ship.stats.movement = 1    
+    ship.stats.movement = 1
   } else if (chance > 39 && chance <= 42) {
     console.log('1 to ship')
     ship.stats.frontHP -= 1
@@ -136,12 +137,12 @@ function drawFloggingCard (ship) {
     ship.stats.floggingCards = 0
     ship.stats.movement = 2
     textStack.push('2 spaces, turn ends')
-    textManager(ship)    
+    textManager(ship)
   } else if (chance > 45 && chance <= 48) {
     console.log('2 spaces')
     ship.stats.movement = 2
     textStack.push('2 spaces')
-    textManager(ship)    
+    textManager(ship)
   } else if (chance > 48 && chance <= 51) {
     console.log('1 space, turn end')
     ship.stats.floggingCards = 0
@@ -156,6 +157,9 @@ function drawFloggingCard (ship) {
     textManager(ship)
   } else if (chance > 54) {
     console.log('MUTINY!!')
+    ship.stats.mutiny = true
+    ship.stats.floggingCards = 0
+    ship.stats.movement = 0
     textStack.push('MUTINY!!')
     textManager(ship)
   }
@@ -165,13 +169,13 @@ function drawFloggingCard (ship) {
       tryFlogging(ship)
     } else if (ship.stats.movement > 0) {
       chooseMove(ship)
-    }  
+    }
   } else if (ship.stats.floggingCards === 0) {
     if (ship.stats.movement === 0) {
       nextShip()
     } else if (ship.stats.movement > 0) {
       chooseMove(ship)
-    }  
+    }
   }
 }
 
@@ -426,6 +430,7 @@ function wallTable (ship, side) {
       ship.stats.mastHP -= 6
       ship.stats[damageSide] -= 6
       ship.stats.cornerCards = 0
+      ship.stats.mutiny = false
       console.log('CRASH! 6 to both. move ends. Possibly thrown from ship')
       textStack.push('CRASH!!')
       nextShip()
@@ -434,6 +439,7 @@ function wallTable (ship, side) {
       ship.stats.mastHP -= 6
       ship.stats[damageSide] -= 6
       ship.stats.cornerCards = 0
+      ship.stats.mutiny = false
       console.log('CRASH! 6 to both. move ends. Possibly thrown from ship')
       textStack.push('CRASH!!')
       nextShip()
@@ -466,7 +472,7 @@ function moveIn (ship) {
     // if we drifted, attempt to drift again
     if (moveTween !== undefined) {
       moveTween.onComplete.addOnce(() => {
-        shipDrift(currentShip, currentShip.currentPosition)
+        shipDrift(ship, ship.currentPosition)
       }, this)
     }
     // otherwise if we didn't drift, resolve another corner card if present or else choose another move
@@ -474,7 +480,7 @@ function moveIn (ship) {
     if (ship.stats.cornerCards > 0) {
       resolveCorneringCards(ship)
     } else {
-      chooseMove(currentShip)
+      chooseMove(ship)
     }
   }
 }
@@ -513,7 +519,7 @@ function shipDrift (ship) {
     if (ship.stats.cornerCards > 0) {
       resolveCorneringCards(ship)
     } else {
-      chooseMove(currentShip)
+      chooseMove(ship)
     }
   }
 }
@@ -522,7 +528,7 @@ function shipMove (ship, starting, ending) {
   let start = getPositionFromName(starting)
   let end = getPositionFromName(ending)
   let moveTween
-  console.log('moving ship: ', ship.key, start.name, end.name)  
+  console.log('moving ship: ', ship.key, start.name, end.name)
 
   textStack = []
 
@@ -569,7 +575,7 @@ function tryFlogging (ship) {
   let style = { font: 'bold 58px Arial', fill: '#e0300d', boundsAlignH: 'center', boundsAlignV: 'middle', stroke: '#000', strokeThickness: 4 }
   let selectedStyle = { font: 'bold 58px Arial', fill: '#f2ca02', boundsAlignH: 'center', boundsAlignV: 'middle', stroke: '#000', strokeThickness: 4 }
   let regularStyle = { font: 'bold 48px Arial', fill: '#000000', boundsAlignH: 'center', boundsAlignV: 'middle' }
-  
+
   let msg = 'Flog rowers?'
   let text = game.add.text(725, 340, msg, style)
   let noText = game.add.text(1020, 450, 'NO', regularStyle)
@@ -603,7 +609,7 @@ function tryFlogging (ship) {
       text.destroy()
       noText.destroy()
       yesText.destroy()
-      drawFloggingCard(ship)      
+      drawFloggingCard(ship)
     } else if (flog === false) {
       game.input.keyboard.removeKey(Phaser.Keyboard.LEFT)
       game.input.keyboard.removeKey(Phaser.Keyboard.RIGHT)
@@ -614,8 +620,8 @@ function tryFlogging (ship) {
       nextShip()
     }
   })
-  
-  //nextShip()
+
+  // nextShip()
 }
 
 // returns an array of all possible moves for a ship
@@ -644,7 +650,58 @@ function nextShip () {
   currentShip.stats.floggingCards = 6
   console.log('+++ ' + currentShip.key + ' turn ' + '+++')
 
-  chooseMove(currentShip)
+  if (currentShip.stats.mutiny === true) {
+    let extraMove = _.random(1, 10)
+    currentShip.stats.speed += extraMove
+    currentShip.stats.movement = currentShip.stats.speed
+    mutinyMove(currentShip)
+  } else {
+    chooseMove(currentShip)
+  }
+}
+
+function mutinyMove (ship) {
+  let moveTween
+  let start = ship.currentPosition
+  let end = getPositionFromName(start.moves[1])
+
+  ship.stats.movement -= 1
+
+  textStack = []
+
+    // if there is a ship where we are moving, dispatch the ship collision signal
+  handleCollision(ship, start.name, end.name)
+
+    // update with new ship postion
+  ship.currentPosition = end
+
+    // if we don't have any cornering cards already and we're not drifting
+    // then draw the right number of cornering cards
+  if (ship === currentShip) {
+    console.log('movement points: ' + ship.stats.movement)
+    ship.stats.cornerCards = speedCheck(ship)
+  }
+
+    // ship movement animation
+  moveTween = game.add.tween(ship).to({ x: end.x, y: end.y }, 500, Phaser.Easing.Back.Out, true)
+  game.add.tween(ship).to({ angle: end.angle }, 500, Phaser.Easing.Back.Out, true)
+
+    // if we have corner cards left, resolve them. Otherwise, choose a new move if we have movement points
+  if (ship === currentShip) {
+    if (ship.stats.cornerCards > 0) {
+      moveTween.onComplete.addOnce(() => {
+        resolveCorneringCards(ship)
+      }, this)
+    } else if (ship.stats.movement > 0) {
+      moveTween.onComplete.addOnce(() => {
+        mutinyMove(ship)
+      }, this)
+    } else if (ship.stats.movement === 0) {
+      moveTween.onComplete.addOnce(() => {
+        nextShip()
+      }, this)
+    }
+  }
 }
 
 // kicks off the move selection process
@@ -654,13 +711,17 @@ function chooseMove (ship) {
     ship.alpha = 1
   })
 
-  if (ship.stats.movement > 0) {
-    let ghostGroup = displayPossibleMoves(ship)
-    toggleSelection(ship, ghostGroup)
-  } else if (ship.stats.floggingCards > 0) {
-    tryFlogging(ship)
+  if (ship.stats.mutiny === true) {
+    mutinyMove(ship)
   } else {
-    nextShip()
+    if (ship.stats.movement > 0) {
+      let ghostGroup = displayPossibleMoves(ship)
+      toggleSelection(ship, ghostGroup)
+    } else if (ship.stats.floggingCards > 0) {
+      tryFlogging(ship)
+    } else {
+      nextShip()
+    }
   }
 }
 

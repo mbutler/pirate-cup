@@ -6,7 +6,7 @@ let stats = {
   mastHP: 60,
   mutiny: false,
   sails: 8,
-  speed: 8,
+  speed: 1,
   movement: 0,
   drift: 0,
   cornerCards: 0,
