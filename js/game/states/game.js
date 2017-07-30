@@ -54,8 +54,7 @@ game.create = function () {
   shipCollide = new Phaser.Signal()
   shipCollide.add(ramming, this)
 
-  currentShip = shipList[0]
-  currentShip.stats.movement = currentShip.stats.speed
+  currentShip = shipList[0]  
   chooseMove(currentShip)
 }
 
@@ -88,8 +87,7 @@ function resolveCorneringCards (ship) {
 }
 
 function drawFloggingCard (ship) {
-  // let chance = _.random(1, 60)
-  let chance = 60
+  let chance = _.random(1, 60)  
 
   console.log('drawing flogging card: ' + chance)
 
@@ -414,6 +412,8 @@ function wallTable (ship, side) {
       ship.stats.mastHP -= 6
       ship.stats[damageSide] -= 6
       ship.stats.cornerCards = 0
+      ship.stats.speed = 0
+      ship.stats.movement = 0
       console.log('CRASH! 6 to both. move ends')
       textStack.push('CRASH!!')
       nextShip()
@@ -422,6 +422,8 @@ function wallTable (ship, side) {
       ship.stats.mastHP -= 6
       ship.stats[damageSide] -= 6
       ship.stats.cornerCards = 0
+      ship.stats.speed = 0
+      ship.stats.movement = 0
       console.log('CRASH! 6 to both. move ends. Possibly thrown from ship')
       textStack.push('CRASH!!')
       nextShip()
@@ -431,6 +433,8 @@ function wallTable (ship, side) {
       ship.stats[damageSide] -= 6
       ship.stats.cornerCards = 0
       ship.stats.mutiny = false
+      ship.stats.speed = 0
+      ship.stats.movement = 0
       console.log('CRASH! 6 to both. move ends. Possibly thrown from ship')
       textStack.push('CRASH!!')
       nextShip()
@@ -440,6 +444,8 @@ function wallTable (ship, side) {
       ship.stats[damageSide] -= 6
       ship.stats.cornerCards = 0
       ship.stats.mutiny = false
+      ship.stats.speed = 0
+      ship.stats.movement = 0
       console.log('CRASH! 6 to both. move ends. Possibly thrown from ship')
       textStack.push('CRASH!!')
       nextShip()
@@ -624,6 +630,43 @@ function tryFlogging (ship) {
   // nextShip()
 }
 
+function selectSpeed (ship) {
+  let maxSpeed = ship.stats.sails
+  let range = _.range(maxSpeed)
+  let keyUp = game.input.keyboard.addKey(Phaser.Keyboard.UP)
+  let keyDown = game.input.keyboard.addKey(Phaser.Keyboard.DOWN)
+  let keyEnter = game.input.keyboard.addKey(Phaser.Keyboard.ENTER)
+  let style = { font: 'bold 58px Arial', fill: '#e0300d', boundsAlignH: 'center', boundsAlignV: 'middle', stroke: '#000', strokeThickness: 4 }
+  let msg = 'Speed?'
+  let speedVal = maxSpeed
+  let speedText = game.add.text(750, 440, speedVal, style)
+  let text = game.add.text(725, 340, msg, style)
+
+  keyUp.onDown.add(() => {
+    speedVal += 1
+    speedVal = _.clamp(speedVal, 0, maxSpeed)
+    speedText.setText(speedVal)
+  })
+
+  keyDown.onDown.add(() => {
+    speedVal -= 1
+    speedVal = _.clamp(speedVal, 0, maxSpeed)
+    speedText.setText(speedVal)
+  })
+
+  keyEnter.onDown.add(() => {
+    game.input.keyboard.removeKey(Phaser.Keyboard.UP)
+    game.input.keyboard.removeKey(Phaser.Keyboard.DOWN)
+    game.input.keyboard.removeKey(Phaser.Keyboard.ENTER)
+    text.destroy()
+    speedText.destroy()
+    ship.stats.speed = speedVal
+    ship.stats.movement = ship.stats.speed
+    let ghostGroup = displayPossibleMoves(ship)
+    toggleSelection(ship, ghostGroup)
+  })
+}
+
 // returns an array of all possible moves for a ship
 function getPossibleMoves (ship) {
   let position = ship.currentPosition
@@ -645,14 +688,14 @@ function nextShip () {
 
   nextShip = shipList[nextIndex]
 
-  currentShip = nextShip
-  currentShip.stats.movement = currentShip.stats.speed
+  currentShip = nextShip  
   currentShip.stats.floggingCards = 6
+  currentShip.stats.speed = 0
   console.log('+++ ' + currentShip.key + ' turn ' + '+++')
 
   if (currentShip.stats.mutiny === true) {
     let extraMove = _.random(1, 10)
-    currentShip.stats.speed += extraMove
+    currentShip.stats.speed = currentShip.stats.sails + extraMove
     currentShip.stats.movement = currentShip.stats.speed
     mutinyMove(currentShip)
   } else {
@@ -714,10 +757,12 @@ function chooseMove (ship) {
   if (ship.stats.mutiny === true) {
     mutinyMove(ship)
   } else {
-    if (ship.stats.movement > 0) {
+    if (ship.stats.speed === 0) {
+      selectSpeed(ship)
+    } else if (ship.stats.movement > 0) {
       let ghostGroup = displayPossibleMoves(ship)
-      toggleSelection(ship, ghostGroup)
-    } else if (ship.stats.floggingCards > 0) {
+      toggleSelection(ship, ghostGroup)      
+    } else if (ship.stats.floggingCards > 0 && ship.stats.movement === 0) {
       tryFlogging(ship)
     } else {
       nextShip()
