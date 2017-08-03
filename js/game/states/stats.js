@@ -4,7 +4,7 @@ let stats = {
   leftHP: 56,
   rightHP: 56,
   mastHP: 60,
-  mutiny: false,
+  mutiny: true,
   sails: 8,
   speed: 0,
   movement: 0,

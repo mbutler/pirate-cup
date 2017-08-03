@@ -14,24 +14,24 @@ game.create = function () {
   map.addTilesetImage('water-tile', 'water')
   ocean = map.createLayer('Water')
   islands = map.createLayer('Islands')
-  track = game.add.sprite(0, 265, 'track')
+  // track = game.add.sprite(0, 265, 'track')
 
-  redShip = makeShip('redShip', 'a9')
+  redShip = makeShip('redShip', 'a1')
   game.add.existing(redShip)
 
-  blueShip = makeShip('blueShip', 'c15')
+  blueShip = makeShip('blueShip', 'b1')
   game.add.existing(blueShip)
 
-  blackShip = makeShip('blackShip', 'd16')
+  blackShip = makeShip('blackShip', 'a21')
   game.add.existing(blackShip)
 
-  greenShip = makeShip('greenShip', 'c40')
+  greenShip = makeShip('greenShip', 'c2')
   game.add.existing(greenShip)
 
-  yellowShip = makeShip('yellowShip', 'd1')
+  yellowShip = makeShip('yellowShip', 'c3')
   game.add.existing(yellowShip)
 
-  whiteShip = makeShip('whiteShip', 'a30')
+  whiteShip = makeShip('whiteShip', 'b3')
   game.add.existing(whiteShip)
 
   shipList.push(redShip, blueShip, blackShip, greenShip, yellowShip, whiteShip)
@@ -55,7 +55,7 @@ game.create = function () {
   shipCollide.add(ramming, this)
 
   currentShip = shipList[0]  
-  chooseMove(currentShip)
+  nextShip()
 }
 
 function makeShip (name, startingPositionName) {
@@ -77,7 +77,9 @@ function makeShip (name, startingPositionName) {
 
 function test () {
   // drawFloggingCard(currentShip)
-  console.log(game)
+  currentShip.stats.mastHP -= 5
+  updateSails(currentShip)
+  console.log(currentShip.stats.sails)
 }
 
 function resolveCorneringCards (ship) {
@@ -217,6 +219,37 @@ function drawCorneringCard (ship) {
     ship.stats.drift = 3
     shipDrift(ship)
   }
+
+  updateSails(ship)
+}
+
+function updateSails (ship) {
+  if (ship.stats.mastHP < 1) {
+    ship.stats.sails = 0
+    ship.animations.play('wreck')
+  } else if (ship.stats.mastHP <= 8) {
+    ship.stats.sails = 1
+    ship.animations.play('damage2')
+  } else if (ship.stats.mastHP <= 15) {
+    ship.stats.sails = 2
+    ship.animations.play('damage2')
+  } else if (ship.stats.mastHP <= 21) {
+    ship.stats.sails = 3
+    ship.animations.play('damage2')
+  } else if (ship.stats.mastHP <= 26) {
+    ship.stats.sails = 4
+    ship.animations.play('damage1')
+  } else if (ship.stats.mastHP <= 31) {
+    ship.stats.sails = 5
+    ship.animations.play('damage1')
+  } else if (ship.stats.mastHP <= 40) {
+    ship.stats.sails = 6
+    ship.animations.play('damage1')
+  } else if (ship.stats.mastHP <= 46) {
+    ship.stats.sails = 7
+  } else if (ship.stats.mastHP <= 60) {
+    ship.stats.sails = 8
+  }
 }
 
 // find the difference between the speed limit and our speed. That's how many cards we draw
@@ -309,32 +342,38 @@ function getPositionFromName (postionName) {
 }
 
 // applies appropriate damage when two ships ram
-function doDamage (rammer, rammed, location) {
+function rammingDamage (rammer, rammed, location) {
   if (location === 'left') {
     rammed.stats.leftHP -= 6
+    updateSails(rammed)
     textStack.push('-6')
     textManager(rammed)
     // console.log(rammed.key + ' now has ' + rammed.stats.leftHP + ' hp on left side')
     rammer.stats.rightHP -= 3
+    updateSails(rammer)
     textStack.push('-3')
     textManager(rammer)
     // console.log(rammer.key + ' now has ' + rammer.stats.rightHP + ' hp on right side')
   } else if (location === 'right') {
     rammed.stats.rightHP -= 6
+    updateSails(rammed)
     textStack.push('-6')
     textManager('-6', rammed)
      // console.log(rammed.key + ' now has ' + rammed.stats.rightHP + ' hp on right side')
     rammer.stats.leftHP -= 3
+    updateSails(rammer)
     textStack.push('-3')
     textManager(rammer)
     // console.log(rammer.key + ' now has ' + rammer.stats.leftHP + ' hp on left side')
   } else if (location === 'rear') {
     rammed.stats.rearHP -= 6
+    updateSails(rammed)
     textStack.push('-6')
     textManager(rammed)
     // console.log(rammed.key + ' now has ' + rammed.stats.rearHP + ' hp on rear side')
     rammer.stats.mastHP -= 4
     rammer.stats.frontHP -= 2
+    updateSails(rammer)
     textStack.push('-6')
     textManager(rammer)
     // console.log(rammer.key + ' now has ' + rammer.stats.mastHP + ' hp on mast and ' + rammer.stats.frontHP + ' on front')
@@ -366,14 +405,18 @@ function wallTable (ship, side) {
       ship.stats[damageSide] -= 3
       ship.stats.cornerCards = 0
       console.log(' 3 wall damage to ' + side)
+      updateSails(ship)
       textStack.push('-3 ' + side)
+      textManager(ship)
       chooseMove(ship)
       break
     case 2:
       ship.stats.mastHP -= 3
       ship.stats.cornerCards = 0
       console.log(' 3 wall damage to mast')
+      updateSails(ship)
       textStack.push('-3 ' + side)
+      textManager(ship)
       chooseMove(ship)
       break
     case 3:
@@ -381,7 +424,9 @@ function wallTable (ship, side) {
       ship.stats[damageSide] -= 3
       ship.stats.cornerCards = 0
       console.log('3 to both')
+      updateSails(ship)
       textStack.push('-3 ' + side + ' and mast')
+      textManager(ship)
       chooseMove(ship)
       break
     case 4:
@@ -389,7 +434,9 @@ function wallTable (ship, side) {
       ship.stats[damageSide] -= 3
       ship.stats.cornerCards = 0
       console.log('3 to both')
+      updateSails(ship)
       textStack.push('-3 ' + side + ' and mast')
+      textManager(ship)
       chooseMove(ship)
       break
     case 5:
@@ -397,7 +444,9 @@ function wallTable (ship, side) {
       ship.stats[damageSide] -= 3
       ship.stats.cornerCards = 0
       console.log('3 to both')
+      updateSails(ship)
       textStack.push('-3 ' + side + ' and mast')
+      textManager(ship)
       chooseMove(ship)
       break
     case 6:
@@ -405,7 +454,9 @@ function wallTable (ship, side) {
       ship.stats[damageSide] -= 6
       ship.stats.cornerCards = 0
       console.log('6 to both')
+      updateSails(ship)
       textStack.push('-6 ' + side + ' and mast')
+      textManager(ship)
       chooseMove(ship)
       break
     case 7:
@@ -415,7 +466,9 @@ function wallTable (ship, side) {
       ship.stats.speed = 0
       ship.stats.movement = 0
       console.log('CRASH! 6 to both. move ends')
+      updateSails(ship)
       textStack.push('CRASH!!')
+      textManager(ship)
       nextShip()
       break
     case 8:
@@ -425,7 +478,9 @@ function wallTable (ship, side) {
       ship.stats.speed = 0
       ship.stats.movement = 0
       console.log('CRASH! 6 to both. move ends. Possibly thrown from ship')
+      updateSails(ship)
       textStack.push('CRASH!!')
+      textManager(ship)
       nextShip()
       break
     case 9:
@@ -436,7 +491,9 @@ function wallTable (ship, side) {
       ship.stats.speed = 0
       ship.stats.movement = 0
       console.log('CRASH! 6 to both. move ends. Possibly thrown from ship')
+      updateSails(ship)
       textStack.push('CRASH!!')
+      textManager(ship)
       nextShip()
       break
     case 10:
@@ -447,7 +504,9 @@ function wallTable (ship, side) {
       ship.stats.speed = 0
       ship.stats.movement = 0
       console.log('CRASH! 6 to both. move ends. Possibly thrown from ship')
+      updateSails(ship)
       textStack.push('CRASH!!')
+      textManager(ship)
       nextShip()
       break
   }
@@ -681,6 +740,7 @@ function nextShip () {
   let index = _.indexOf(shipList, currentShip)
   let nextIndex = index + 1
   let nextShip
+  let previousShip = currentShip
 
   if (nextIndex > shipList.length - 1) {
     nextIndex = 0
@@ -688,7 +748,8 @@ function nextShip () {
 
   nextShip = shipList[nextIndex]
 
-  currentShip = nextShip  
+  currentShip = nextShip
+  // updateSails(previousShip)
   currentShip.stats.floggingCards = 6
   currentShip.stats.speed = 0
   console.log('+++ ' + currentShip.key + ' turn ' + '+++')
@@ -697,7 +758,7 @@ function nextShip () {
     let extraMove = _.random(1, 10)
     currentShip.stats.speed = currentShip.stats.sails + extraMove
     currentShip.stats.movement = currentShip.stats.speed
-    mutinyMove(currentShip)
+    chooseMove(currentShip)
   } else {
     chooseMove(currentShip)
   }
@@ -739,7 +800,7 @@ function mutinyMove (ship) {
       moveTween.onComplete.addOnce(() => {
         mutinyMove(ship)
       }, this)
-    } else if (ship.stats.movement === 0) {
+    } else if (ship.stats.movement <= 0) {
       moveTween.onComplete.addOnce(() => {
         nextShip()
       }, this)
@@ -881,7 +942,7 @@ function ramming (location, rammed, rammer) {
   }
 
     // need to calculate damge right here before the rear location changes to right or left for movement
-  doDamage(rammer, rammed, location)
+  rammingDamage(rammer, rammed, location)
   textStack = []
 
     // if it's from the rear there's a 50/50 chance of moving right or left
