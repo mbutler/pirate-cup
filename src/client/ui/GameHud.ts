@@ -1,3 +1,4 @@
+import { PERSONALITY_LABELS, type CaptainPersonalities } from '../../core/ai/Personality';
 import type { ShipState, DisplacedCrew } from '../../core/entities/types';
 import type { TurnPhase } from '../../core/state/GameState';
 import {
@@ -18,6 +19,7 @@ export interface HudChoice {
 export interface HudSnapshot {
     turn: number;
     computerCaptains: readonly string[];
+    personalities: CaptainPersonalities;
     lapsToWin: number;
     winnerId: string | null;
     phase: TurnPhase;
@@ -141,13 +143,13 @@ export class GameHud {
                 )
                 .map(
                     (racer, i) =>
-                        `<div class="fleet-ship ${racer.id === snapshot.activePlayerId ? 'is-active' : ''} ${racer.destroyed ? 'is-wrecked' : ''}" style="--ship-color:${SHIP_COLORS[racer.color]}">${shipIcon(racer.color)}<div><strong>${racer.color} <small>${racer.ownerId.replace('player-', 'P')}${snapshot.computerCaptains.includes(racer.ownerId) ? ' · Computer' : ''}</small></strong><span>${racer.destroyed ? (snapshot.displacedCrew.some((crew) => crew.id === racer.ownerId) ? 'Crew afloat' : 'Wrecked') : racer.id === snapshot.winnerId ? 'Winner' : `#${i + 1} · Lap ${Math.min(racer.lapsCompleted + 1, snapshot.lapsToWin)}/${snapshot.lapsToWin}${racer.rowers.temperament === 'mutiny' ? ' · Mutiny' : ''}`}</span></div><i></i></div>`,
+                        `<div class="fleet-ship ${racer.id === snapshot.activePlayerId ? 'is-active' : ''} ${racer.destroyed ? 'is-wrecked' : ''}" style="--ship-color:${SHIP_COLORS[racer.color]}">${shipIcon(racer.color)}<div><strong>${racer.color} <small>${racer.ownerId.replace('player-', 'P')}${snapshot.computerCaptains.includes(racer.ownerId) ? ` · ${PERSONALITY_LABELS[snapshot.personalities[racer.ownerId] ?? 'racer']}` : ''}</small></strong><span>${racer.destroyed ? (snapshot.displacedCrew.some((crew) => crew.id === racer.ownerId) ? 'Crew afloat' : 'Wrecked') : racer.id === snapshot.winnerId ? 'Winner' : `#${i + 1} · Lap ${Math.min(racer.lapsCompleted + 1, snapshot.lapsToWin)}/${snapshot.lapsToWin}${racer.rowers.temperament === 'mutiny' ? ' · Mutiny' : ''}`}</span></div><i></i></div>`,
                 )
                 .join('') +
                 snapshot.displacedCrew
                     .map(
                         (crew) =>
-                            `<div class="fleet-ship" style="--ship-color:${SHIP_COLORS[crew.color]}">${shipIcon(crew.color)}<div><strong>${crew.color} <small>${crew.id.replace('player-', 'P')}${snapshot.computerCaptains.includes(crew.id) ? ' · Computer' : ''}</small></strong><span>Crew afloat · ${crew.captainHp + crew.boarderHp} health · ${crew.lapsCompleted} laps</span></div></div>`,
+                            `<div class="fleet-ship" style="--ship-color:${SHIP_COLORS[crew.color]}">${shipIcon(crew.color)}<div><strong>${crew.color} <small>${crew.id.replace('player-', 'P')}${snapshot.computerCaptains.includes(crew.id) ? ` · ${PERSONALITY_LABELS[snapshot.personalities[crew.id] ?? 'racer']}` : ''}</small></strong><span>Crew afloat · ${crew.captainHp + crew.boarderHp} health · ${crew.lapsCompleted} laps</span></div></div>`,
                     )
                     .join(''),
         );

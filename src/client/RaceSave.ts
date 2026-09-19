@@ -1,3 +1,7 @@
+import {
+    PERSONALITIES,
+    type CaptainPersonalities,
+} from '../core/ai/Personality';
 import type { GameAction } from '../core';
 import { defaultTrack } from '../core/track/TrackGraph';
 
@@ -12,6 +16,7 @@ export interface RaceSave {
     playerCount: number;
     lapsToWin: number;
     computerCaptains: string[];
+    personalities?: CaptainPersonalities;
     actions: GameAction[];
 }
 
@@ -47,6 +52,20 @@ export function parseSave(text: string): RaceSave {
         save.computerCaptains.length > save.playerCount ||
         !save.computerCaptains.every(player) ||
         new Set(save.computerCaptains).size !== save.computerCaptains.length
+    )
+        fail();
+    if (
+        save.personalities !== undefined &&
+        (!save.personalities ||
+            typeof save.personalities !== 'object' ||
+            Array.isArray(save.personalities) ||
+            Object.entries(save.personalities).some(
+                ([id, value]) =>
+                    !save.computerCaptains.includes(id) ||
+                    !PERSONALITIES.includes(
+                        value as (typeof PERSONALITIES)[number],
+                    ),
+            ))
     )
         fail();
     if (!Array.isArray(save.actions) || save.actions.length > 20000) fail();

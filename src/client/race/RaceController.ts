@@ -147,6 +147,7 @@ export class RaceController {
                     config.playerCount,
                     config.lapsToWin,
                     this.session.computerCaptains,
+                    this.session.personalities,
                 ),
             );
             this.scene.scene.restart();
@@ -603,7 +604,7 @@ export class RaceController {
     private async runComputerAction() {
         if (this.disposed) return;
         if (!this.hud.modalOpen) {
-            const action = chooseComputerAction(this.session.state);
+            const action = chooseComputerAction(this.session.state, this.session.personalities);
             if (action) await this.playEvents(this.session.dispatch(action));
         }
         await this.resumeAfterAction();
@@ -962,6 +963,7 @@ export class RaceController {
         );
         this.hud.render({
             computerCaptains: this.session.computerCaptains,
+            personalities: this.session.personalities,
             displacedCrew: Object.values(this.session.state.displacedCrew),
             crewChoices: this.crewChoices().map((choice, value) => ({
                 ...choice,

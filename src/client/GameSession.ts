@@ -1,3 +1,7 @@
+import {
+    assignPersonalities,
+    type CaptainPersonalities,
+} from '../core/ai/Personality';
 import { parseSave, SAVE_VERSION, type RaceSave } from './RaceSave';
 import {
     createInitialState,
@@ -14,6 +18,7 @@ import {
  */
 export interface GameSession {
     readonly state: GameState;
+    readonly personalities: CaptainPersonalities;
     readonly computerCaptains: readonly string[];
     dispatch(action: GameAction): GameEvent[];
     snapshot(): RaceSave;
@@ -25,13 +30,20 @@ export function createLocalSession(
     playerCount = 6,
     lapsToWin = 3,
     computerCaptains: readonly string[] = [],
+    personalityChoices: CaptainPersonalities = {},
 ): GameSession {
     let state = createInitialState(seed, { playerCount, lapsToWin });
     const rng = createRng(seed);
+    const personalities = assignPersonalities(
+        seed,
+        computerCaptains,
+        personalityChoices,
+    );
     const actions: GameAction[] = [];
     let saveHandler: (() => void) | null = null;
 
     return {
+        personalities,
         computerCaptains: [...computerCaptains],
         snapshot() {
             return structuredClone({
@@ -41,6 +53,7 @@ export function createLocalSession(
                 playerCount,
                 lapsToWin,
                 computerCaptains: [...computerCaptains],
+                personalities,
                 actions,
             });
         },
@@ -80,6 +93,7 @@ export function restoreSession(text: string): GameSession {
         save.playerCount,
         save.lapsToWin,
         save.computerCaptains,
+        save.personalities,
     );
     for (const action of save.actions) session.dispatch(action);
     return session;

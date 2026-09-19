@@ -1,3 +1,12 @@
+import { STYLES, type CaptainPersonalities } from './Personality';
+import { resolveRamming } from '../cards/decks';
+import {
+    inferRamHitSideFromApproach,
+    resolveFrontHitBounce,
+} from '../rules/ramming';
+import { applyHullDamage, applyMastDamage } from '../rules/damage';
+import { raceScore } from '../rules/race';
+import type { ShipState } from '../entities/types';
 import type { GameAction } from '../actions/types';
 import type { GameState } from '../state/GameState';
 import type { MoveDirection } from '../track/types';
@@ -9,10 +18,15 @@ import { hijackChance } from '../rules/crewSkill';
 const directions: MoveDirection[] = ['forward', 'laneIn', 'laneOut'];
 
 /** Deterministic decisions from public state only; never peeks at the rules RNG. */
-export function chooseComputerAction(state: GameState): GameAction | null {
+export function chooseComputerAction(
+    state: GameState,
+    personalities: CaptainPersonalities = {},
+): GameAction | null {
     if (state.phase === 'finished') return null;
     const id = state.activePlayerId;
     const ship = id ? state.ships[id] : undefined;
+    const owner = state.activeCrewId ?? ship?.ownerId ?? '';
+    const style = STYLES[personalities[owner] ?? 'racer'];
     if (state.phase === 'crew' && state.activeCrewId) {
         const crewId = state.activeCrewId;
         const crew = state.displacedCrew[crewId];
@@ -58,7 +72,9 @@ export function chooseComputerAction(state: GameState): GameAction | null {
         if (!ship) return { type: 'END_TURN' };
         const targets = boardingTargets(state, ship.id).sort(
             (a, b) =>
-                state.ships[a].crew.boarderHp - state.ships[b].crew.boarderHp,
+                state.ships[a].crew.boarderHp -
+                state.ships[b].crew.boarderHp -
+                (raceScore(state.ships[a]) - raceScore(state.ships[b])) * 4,
         );
         return targets.length
             ? {
@@ -78,7 +94,14 @@ export function chooseComputerAction(state: GameState): GameAction | null {
                 speed = Math.min(speed, step);
                 break;
             }
-            const safe = defaultTrack.safeSpeedAt(next);
+            const limit = defaultTrack.safeSpeedAt(next);
+            const safe =
+                limit === undefined
+                    ? undefined
+                    : limit +
+                      (ship.hull.structure > 20 && ship.rowers.hp > 35
+                          ? style.overspeed
+                          : 0);
             if (safe !== undefined && speed > safe)
                 speed = Math.max(step - 1, safe);
             position = next;
@@ -110,7 +133,8 @@ export function chooseComputerAction(state: GameState): GameAction | null {
                 ship.hull.front > 12 &&
                 ship.hull.structure > 15 &&
                 ship.rowers.hp > 30 &&
-                ship.flogAttemptsRemaining === state.config.flogAttemptsPerTurn,
+                ship.flogAttemptsRemaining >
+                    state.config.flogAttemptsPerTurn - style.pushes,
         };
     }
     if (ship.rowers.temperament === 'mutiny')
@@ -128,15 +152,52 @@ export function chooseComputerAction(state: GameState): GameAction | null {
         const rival = Object.values(state.ships).find(
             (s) => !s.destroyed && s.id !== ship.id && s.positionId === target,
         );
-        const ramCost = rival
-            ? ship.hull.structure > 20 && rival.hull.structure < 10
-                ? 0.5
-                : 4
+        const ramValue = rival
+            ? evaluateRam(ship, rival, personalities[owner] ?? 'racer')
             : 0;
+        // Avoid ending a turn beside a healthy hostile boarder; opportunists seek a finishing strike.
+        const neighbors = Object.values(defaultTrack.getNode(target).neighbors);
+        const boardingValue =
+            ship.movementRemaining === 1 && ship.crew.boarderHp > 0
+                ? Object.values(state.ships)
+                      .filter(
+                          (other) =>
+                              !other.destroyed &&
+                              other.id !== ship.id &&
+                              neighbors.includes(other.positionId) &&
+                              other.crew.boarderHp > 0,
+                      )
+                      .reduce(
+                          (value, other) =>
+                              value +
+                              (other.crew.boarderHp <= 4
+                                  ? 2 * style.boarding
+                                  : -0.3 * style.caution),
+                          0,
+                      )
+                : 0;
+        // One extra hex of route awareness discourages entering a corner with no safe exit.
+        const exitRisk =
+            ship.movementRemaining > 1
+                ? Math.min(
+                      ...directions.map((next) => {
+                          const hex = defaultTrack.neighbor(target, next);
+                          return hex === 'wall'
+                              ? 8
+                              : defaultTrack.corneringChecksOwed(
+                                    ship.chosenSpeed,
+                                    hex,
+                                );
+                      }),
+                  )
+                : 0;
         return (
             progress * 100 -
-            defaultTrack.corneringChecksOwed(ship.chosenSpeed, target) * 3 -
-            ramCost +
+            defaultTrack.corneringChecksOwed(ship.chosenSpeed, target) *
+                style.corner -
+            exitRisk * style.corner * 0.4 +
+            ramValue +
+            boardingValue +
             (direction === 'forward' ? 0.2 : 0) -
             (target.startsWith('x') ? 20 : 0)
         );
@@ -147,4 +208,41 @@ export function chooseComputerAction(state: GameState): GameAction | null {
         playerId: ship.id,
         direction: choices[0] ?? 'forward',
     };
+}
+
+/** Evaluate known collision damage, never draw or peek at the race RNG. */
+export function evaluateRam(
+    ship: ShipState,
+    rival: ShipState,
+    personality: keyof typeof STYLES,
+): number {
+    const style = STYLES[personality];
+    const side = resolveFrontHitBounce(
+        inferRamHitSideFromApproach(ship.positionId, rival.positionId),
+        rival.positionId,
+    );
+    const hit = resolveRamming(side);
+    const defender = applyHullDamage(
+        rival,
+        hit.rammedSide,
+        hit.rammedDamage,
+    ).ship;
+    let attacker = hit.rammerSide
+        ? applyHullDamage(ship, hit.rammerSide, hit.rammerDamage ?? 0).ship
+        : ship;
+    attacker = applyMastDamage(attacker, hit.rammerMastDamage ?? 0);
+    // Even a bruiser avoids a known fatal collision if another line exists.
+    if (attacker.destroyed) return -1000;
+    const damageValue = (before: ShipState, after: ShipState) =>
+        (before.hull.structure - after.hull.structure) * 1.2 +
+        (before.maxSpeed - after.maxSpeed) * 2 +
+        (before.rowers.hp - after.rowers.hp) * 0.2;
+    const threat = raceScore(rival) >= raceScore(ship) ? 1.25 : 0.8;
+    const reward =
+        (hit.rammedDamage * 0.25 +
+            damageValue(rival, defender) +
+            (defender.destroyed ? 10 : 0)) *
+        threat;
+    const cost = (hit.rammerDamage ?? 0) * 0.25 + damageValue(ship, attacker);
+    return reward * style.attack - cost * style.caution - 0.5;
 }

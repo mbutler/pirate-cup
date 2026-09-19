@@ -1,3 +1,8 @@
+import {
+    PERSONALITIES,
+    PERSONALITY_LABELS,
+    type Personality,
+} from '../../core/ai/Personality';
 import { Scene, Scenes } from 'phaser';
 import {
     createLocalSession,
@@ -122,7 +127,7 @@ export class MainMenu extends Scene {
                 .slice(0, players)
                 .map(
                     (kind, index) =>
-                        `<label>${DEFAULT_SHIP_COLORS[index]} · P${index + 1}<select data-seat="${index}" aria-label="${DEFAULT_SHIP_COLORS[index]} captain"><option value="human" ${kind === 'human' ? 'selected' : ''}>Human</option><option value="computer" ${kind === 'computer' ? 'selected' : ''}>Computer</option></select></label>`,
+                        `<label>${DEFAULT_SHIP_COLORS[index]} · P${index + 1}<select data-seat="${index}" aria-label="${DEFAULT_SHIP_COLORS[index]} captain"><option value="human" ${kind === 'human' ? 'selected' : ''}>Human</option><option value="computer" ${kind === 'computer' ? 'selected' : ''}>Computer · Random</option>${PERSONALITIES.map((style) => `<option value="${style}" ${kind === style ? 'selected' : ''}>Computer · ${PERSONALITY_LABELS[style]}</option>`).join('')}</select></label>`,
                 )
                 .join('');
         };
@@ -151,8 +156,22 @@ export class MainMenu extends Scene {
                     seats
                         .slice(0, players)
                         .flatMap((kind, index) =>
-                            kind === 'computer' ? [`player-${index + 1}`] : [],
+                            kind !== 'human' ? [`player-${index + 1}`] : [],
                         ),
+                    Object.fromEntries(
+                        seats
+                            .slice(0, players)
+                            .flatMap((kind, index) =>
+                                PERSONALITIES.includes(kind as Personality)
+                                    ? [
+                                          [
+                                              `player-${index + 1}`,
+                                              kind as Personality,
+                                          ],
+                                      ]
+                                    : [],
+                            ),
+                    ),
                 ),
             );
             this.scene.start('Race');

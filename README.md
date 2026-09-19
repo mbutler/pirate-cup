@@ -87,3 +87,9 @@ Races autosave in this browser after every rules action, including computer turn
 Browser storage is specific to the browser and origin (scheme, hostname, and port). Use export/import to move between localhost, the published website, or another device. Clearing site data removes the autosave. When browser storage is unavailable or full, the race continues and the footer prompts you to export instead.
 
 Save format version 1 stores the initial seed, fleet settings, human/computer assignments, and action history. Replaying that history restores the complete rules state and random sequence without replaying animations. Temporary UI selections, sound preferences, and the displayed ship's log are not saved. Rule changes that affect replay must bump `SAVE_VERSION` in `src/client/RaceSave.ts`. Imports are limited to 2 MB and 20,000 actions.
+
+## Computer captain personalities
+
+Each computer seat can use **Random**, **Racer**, **Bruiser**, **Opportunist**, or **Daredevil**. Random assignments use a separate seeded shuffle for variety without affecting race dice. Styles follow captain ownership through hijacks, survive export/import, and remain the same in a rematch. Existing saves without style data receive reproducible assignments when loaded.
+
+Racers prioritize progress and safe corners. Bruisers value favorable damage exchanges. Opportunists favor ending movement beside a boarder they can defeat. Healthy daredevils tolerate one extra point of corner speed and may push the rowers up to three times. Every style considers armor, hull damage, lost rowing speed, rival race position, and the next hex's corner risk; known fatal rams receive a strong penalty. Boarding targets balance vulnerable boarders against race leaders. These are tactical heuristics using public state, not knowledge of future dice. Collision chains and random reef outcomes are not fully forecast.
