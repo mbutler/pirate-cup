@@ -91,6 +91,7 @@ export type WallCollisionOutcome =
     | 'mast3EndChecks'
     | 'both3EndChecks'
     | 'both6EndChecks'
+    | 'crashKeepFrenzy'
     | 'crash';
 
 export const WALL_COLLISION_DECK: DeckDefinition<WallCollisionOutcome> = {
@@ -99,8 +100,9 @@ export const WALL_COLLISION_DECK: DeckDefinition<WallCollisionOutcome> = {
         { id: 'hull3EndChecks', weight: 1 },
         { id: 'mast3EndChecks', weight: 1 },
         { id: 'both3EndChecks', weight: 3 },
-        { id: 'both6EndChecks', weight: 2 },
-        { id: 'crash', weight: 3 },
+        { id: 'both6EndChecks', weight: 1 },
+        { id: 'crashKeepFrenzy', weight: 2 },
+        { id: 'crash', weight: 2 },
     ],
 };
 

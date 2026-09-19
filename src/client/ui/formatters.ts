@@ -119,7 +119,8 @@ export function formatEventMessage(event: GameEvent): string {
         mast3EndChecks: '−3 rowers; corner checks end',
         both3EndChecks: '−3 hull, −3 rowers; corner checks end',
         both6EndChecks: '−6 hull, −6 rowers; corner checks end',
-        crash: '−6 hull, −6 rowers; movement ends',
+        crashKeepFrenzy: '−6 hull, −6 rowers; movement ends',
+        crash: '−6 hull, −6 rowers; movement and mutiny end',
     };
     switch (event.type) {
         case 'CREW_MESSAGE':
@@ -135,7 +136,7 @@ export function formatEventMessage(event: GameEvent): string {
         case 'FLOGGING_DRAWN':
             return `Flogging: ${formatFloggingOutcome(event.outcome)}`;
         case 'WALL_COLLISION':
-            return `Wall hit (${formatHitSide(event.side)}): ${wallOutcomes[event.outcome]}`;
+            return `Reef strike (${formatHitSide(event.side)}): ${wallOutcomes[event.outcome]}`;
         case 'RAMMING': {
             const rammerParts = [
                 event.rammerHullDamage
@@ -172,7 +173,7 @@ export function formatEventMessage(event: GameEvent): string {
             return event.reason === 'cooldown'
                 ? 'Captain regains control — mutiny ends'
                 : event.reason === 'crash'
-                  ? 'Hard crash — mutiny ends'
+                  ? 'Grounded on the reef — mutiny ends'
                   : event.reason === 'wreck'
                     ? 'Ship wrecked — mutiny ends'
                     : 'Mutiny ended';

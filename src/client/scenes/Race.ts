@@ -1,8 +1,10 @@
 import { Scene, Scenes } from 'phaser';
 import type { GameSession } from '../GameSession';
 import { ASSETS, DISPLAY } from '../config';
+import { drawReefs } from '../track/Reefs';
 import { TRACK_LAYOUT } from '../track/TrackLayout';
 import { FINISH_LINE } from '../../core/rules/race';
+import type { TrackNode } from '../../core/track/types';
 import { defaultTrack } from '../../core/track/TrackGraph';
 import { RaceController } from '../race/RaceController';
 
@@ -19,12 +21,76 @@ export class Race extends Scene {
         this.cameras.main.setBackgroundColor(DISPLAY.backgroundColor);
         this.cameras.main.setScroll(0, 180);
         this.drawTrack();
+        this.addHexInspector(session);
 
         this.controller = new RaceController(this, session);
         this.controller.start();
 
         this.events.once(Scenes.Events.SHUTDOWN, () => {
             this.controller?.destroy();
+        });
+    }
+
+    private addHexInspector(session: GameSession) {
+        const label = this.add
+            .text(0, 0, '', {
+                fontFamily: 'Arial, sans-serif',
+                fontSize: '18px',
+                color: '#fff3ca',
+                backgroundColor: '#102c32',
+                padding: { x: 10, y: 6 },
+            })
+            .setDepth(100)
+            .setVisible(false);
+        const canvas = this.game.canvas;
+        const inspect = (pointer: Phaser.Input.Pointer) => {
+            const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+            let nearest: TrackNode | undefined;
+            let distance = 32 * 32;
+            for (const node of defaultTrack.nodes.values()) {
+                const squared =
+                    (node.x - point.x) ** 2 + (node.y - point.y) ** 2;
+                if (squared < distance) {
+                    nearest = node;
+                    distance = squared;
+                }
+            }
+            if (!nearest) {
+                label.setVisible(false);
+                canvas.removeAttribute('title');
+                return;
+            }
+            const occupants = Object.values(session.state.ships).filter(
+                (ship) => ship.positionId === nearest!.id,
+            );
+            const detail = occupants
+                .map(
+                    (ship) =>
+                        `${ship.color}${ship.destroyed ? ' wreck (passable)' : ' ship'}`,
+                )
+                .join(' · ');
+            const text = `${nearest.id.toUpperCase()} · ${nearest.safeSpeed === undefined ? 'Open water' : `Safe speed ${nearest.safeSpeed}`}${detail ? `\n${detail}` : ''}`;
+            label
+                .setText(text)
+                .setPosition(
+                    Math.min(nearest.x + 24, 1900 - label.width),
+                    Math.max(190, nearest.y - label.height - 20),
+                )
+                .setVisible(true);
+            canvas.title = text;
+        };
+        const hide = () => {
+            label.setVisible(false);
+            canvas.removeAttribute('title');
+        };
+        this.input.on('pointermove', inspect);
+        this.input.on('pointerdown', inspect);
+        this.input.on('gameout', hide);
+        this.events.once(Scenes.Events.SHUTDOWN, () => {
+            this.input.off('pointermove', inspect);
+            this.input.off('pointerdown', inspect);
+            this.input.off('gameout', hide);
+            canvas.removeAttribute('title');
         });
     }
 
@@ -56,11 +122,13 @@ export class Race extends Scene {
             map.createLayer('Water', waterSet, 0, 0)?.setDepth(0);
         }
 
-        this.add.rectangle(960, 540, 1920, 1080, 0x102c32, 0.25).setDepth(0.5);
+        this.add.rectangle(960, 540, 1920, 1080, 0x102c32, 0.42).setDepth(0.5);
 
         if (islandSets.length > 0) {
             map.createLayer('Islands', islandSets, 0, 0)?.setDepth(1);
         }
+
+        drawReefs(this);
 
         this.add
             .image(0, TRACK_LAYOUT.overlayY, ASSETS.map.trackOverlayKey)

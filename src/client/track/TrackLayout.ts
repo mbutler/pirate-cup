@@ -22,3 +22,8 @@ export function trackNodeToWorld(node: TrackNode) {
         angle: node.angle,
     };
 }
+
+/** Signed shortest turn, including the seam between +180 and -180 degrees. */
+export function shortestAngleDelta(from: number, to: number): number {
+    return ((((to - from + 180) % 360) + 360) % 360) - 180;
+}

@@ -2,7 +2,11 @@ import { defaultTrack } from '../../core';
 import type { ShipState, DisplacedCrew } from '../../core/entities/types';
 import type { MoveDirection, TrackNodeId } from '../../core/track/types';
 import { ASSETS, SHIP_FRAME } from '../config';
-import { TRACK_LAYOUT, trackNodeToWorld } from '../track/TrackLayout';
+import {
+    TRACK_LAYOUT,
+    trackNodeToWorld,
+    shortestAngleDelta,
+} from '../track/TrackLayout';
 import { MovePreview, type MovePreviewOption } from './MovePreview';
 
 export class RaceBoard {
@@ -186,7 +190,10 @@ export class RaceBoard {
                 targets: sprite,
                 x: world.x,
                 y: world.y,
-                angle: world.angle,
+                rotation:
+                    sprite.rotation +
+                    (shortestAngleDelta(sprite.angle, world.angle) * Math.PI) /
+                        180,
                 duration: this.quick ? 120 : 280,
                 ease: 'Sine.easeInOut',
                 onComplete: () => resolve(),

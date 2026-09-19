@@ -23,3 +23,11 @@ The 450-race run completed with 418 lap victories, 27 all-disabled draws, and 5 
 | 3 laps | 23.5 | 39 | 239 |
 
 These are regression scenarios, not an unbiased estimate of human play. The simple bots do not plan interception routes, optimize corner speed, or evaluate capture value. Damaged vessels and repeated captures can still produce very long races. Human playtests should assess whether current-lap progress should survive capture, whether crew movement needs expansion, and whether the fixed starting order advantages a seat. Those rules are unchanged in this pass.
+
+## Wall and wreck audit following human playtest
+
+The reference sheet linked above distinguishes wall rolls 1–6 (damage, movement continues), 7–8 (damage and movement ends), and 9–10 (damage, movement and frenzy end). The engine now matches those damage/movement/frenzy results. Previously rolls 6–7 were grouped together and could end frenzy without stopping movement. Ejection checks listed for rolls 8–10 are still not implemented; this is not yet the complete original crash procedure.
+
+Current drift behavior is one wall resolution per drift sequence. Contact cancels unused drift steps and pending corner checks. Tests cover a three-hex slide with zero, one, or two free hexes before the wall. A later movement step or independent ram can cause another impact. The reference sheet does not establish the exact handling of unused lateral movement; this remains a documented interpretation pending a full rulebook check.
+
+Destroyed and disabled ships stay visible but are passable. Their hover label explicitly says so. Available references do not verify whether Circus Imperium wrecks block movement, can be crossed, or use a separate obstacle procedure. Wreck collision behavior has therefore not been changed or claimed as faithful to the original. A rulebook section on obstacles/wrecks is needed before implementing it.

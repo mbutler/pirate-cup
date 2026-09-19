@@ -30,7 +30,9 @@ export function resolveWallCollisionForShip(
     }
 
     const outcome = drawWallCollision(rng);
-    const events: GameEvent[] = [{ type: 'WALL_COLLISION', playerId, side, outcome }];
+    const events: GameEvent[] = [
+        { type: 'WALL_COLLISION', playerId, side, outcome },
+    ];
     let nextShip = {
         ...ship,
         corneringChecksRemaining: 0,
@@ -68,20 +70,26 @@ export function resolveWallCollisionForShip(
         ships: { ...state.ships, [playerId]: nextShip },
     };
 
-    const hullDamage = outcome === 'hull3EndChecks'
-        ? 3
-        : outcome === 'both3EndChecks'
-          ? 3
-          : outcome === 'both6EndChecks' || outcome === 'crash'
-            ? 6
-            : 0;
-    const rowerDamage = outcome === 'mast3EndChecks'
-        ? 3
-        : outcome === 'both3EndChecks'
-          ? 3
-          : outcome === 'both6EndChecks' || outcome === 'crash'
-            ? 6
-            : 0;
+    const hullDamage =
+        outcome === 'hull3EndChecks'
+            ? 3
+            : outcome === 'both3EndChecks'
+              ? 3
+              : outcome === 'both6EndChecks' ||
+                  outcome === 'crashKeepFrenzy' ||
+                  outcome === 'crash'
+                ? 6
+                : 0;
+    const rowerDamage =
+        outcome === 'mast3EndChecks'
+            ? 3
+            : outcome === 'both3EndChecks'
+              ? 3
+              : outcome === 'both6EndChecks' ||
+                  outcome === 'crashKeepFrenzy' ||
+                  outcome === 'crash'
+                ? 6
+                : 0;
 
     nextState = integratePostDamage(
         nextState,

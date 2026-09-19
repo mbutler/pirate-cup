@@ -82,7 +82,7 @@ export function shouldTriggerCriticalFrenzy(
 }
 
 export function wallOutcomeEndsFrenzy(outcome: WallCollisionOutcome): boolean {
-    return outcome === 'crash' || outcome === 'both6EndChecks';
+    return outcome === 'crash';
 }
 
 export function rollFrenzyCooldown(

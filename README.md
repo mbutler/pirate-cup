@@ -17,6 +17,12 @@ npx tsc --noEmit           # Type checking
 npm run build-nolog       # Production build in dist/
 ```
 
+## Upload to a web host
+
+Run `npm ci`, `npx tsc --noEmit`, and `npm run build-nolog`. Upload **the contents of `dist/`** to your host's public folder: `index.html`, `style.css`, `favicon.png`, and the complete `assets/` directory. The game is static and needs no Node server or backend. Relative asset paths support hosting at the domain root or in a subfolder (use its trailing-slash URL).
+
+The prepared `pirate-cup-web.zip` contains these files at the archive root and can be extracted directly into the destination folder. Build output and the archive are generated artifacts excluded from Git; source changes are committed. Rebuild and recreate the archive after future edits. Google Fonts is optional; local fallback fonts are used if unavailable. Test over HTTP(S), not by opening `index.html` as a local file.
+
 ## Controls
 
 Choose 2–6 captains and a race distance of 1–3 laps at the harbor, then **Set sail**. All captains share the screen and take turns.
