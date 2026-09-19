@@ -28,9 +28,12 @@ function stateWithShips(positions: Record<string, string>): GameState {
         movementOrder: Object.keys(positions),
         movementIndex: 0,
         ships,
+        displacedCrew: {},
+        activeCrewId: null,
         inputs: {},
         pendingCombat: [],
         winnerId: null,
+        finishReason: null,
     };
 }
 

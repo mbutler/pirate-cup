@@ -7,6 +7,7 @@ import { applyHullDamage, applyMastDamage } from './damage';
 import { getOccupyingShipId } from './movement';
 import { integratePostDamage } from './frenzy';
 import { resolveWallCollisionForShip, wallSideForPush } from './wallCollision';
+import { moveShip } from './race';
 import type { GameState } from '../state/GameState';
 
 const MOVE_DIRECTIONS: MoveDirection[] = [
@@ -87,10 +88,7 @@ export function resolveFrontHitBounce(
     return hitSide;
 }
 
-function pushSideForDisplacement(
-    hitSide: HitSide,
-    rng: Rng,
-): 'left' | 'right' {
+function pushSideForDisplacement(hitSide: HitSide, rng: Rng): 'left' | 'right' {
     if (hitSide === 'left') {
         return 'left';
     }
@@ -102,9 +100,7 @@ function pushSideForDisplacement(
     return rng.int(0, 1) === 0 ? 'left' : 'right';
 }
 
-function displacementDirection(
-    pushSide: 'left' | 'right',
-): MoveDirection {
+function displacementDirection(pushSide: 'left' | 'right'): MoveDirection {
     return pushSide === 'left' ? 'rearRight' : 'rearLeft';
 }
 
@@ -137,7 +133,11 @@ function applyRammingDamage(
         rammerMastDamage: result.rammerMastDamage,
     });
 
-    let updatedRammed = applyHullDamage(rammed, result.rammedSide, result.rammedDamage).ship;
+    let updatedRammed = applyHullDamage(
+        rammed,
+        result.rammedSide,
+        result.rammedDamage,
+    ).ship;
     let updatedRammer = rammer;
 
     if (result.rammerMastDamage) {
@@ -145,7 +145,11 @@ function applyRammingDamage(
     }
 
     if (result.rammerSide && result.rammerDamage) {
-        updatedRammer = applyHullDamage(updatedRammer, result.rammerSide, result.rammerDamage).ship;
+        updatedRammer = applyHullDamage(
+            updatedRammer,
+            result.rammerSide,
+            result.rammerDamage,
+        ).ship;
     }
 
     nextState.ships[rammedId] = updatedRammed;
@@ -160,36 +164,13 @@ function applyRammingDamage(
     }
 
     const rammedDamage = result.rammedDamage;
-    const rammerDamage = (result.rammerDamage ?? 0) + (result.rammerMastDamage ?? 0);
+    const rammerDamage =
+        (result.rammerDamage ?? 0) + (result.rammerMastDamage ?? 0);
 
     nextState = integratePostDamage(nextState, rammedId, rammedDamage, events);
     nextState = integratePostDamage(nextState, rammerId, rammerDamage, events);
 
     return nextState;
-}
-
-function forcedMove(
-    state: GameState,
-    playerId: string,
-    from: TrackNodeId,
-    to: TrackNodeId,
-    events: GameEvent[],
-): GameState {
-    const ship = state.ships[playerId];
-
-    if (!ship || ship.destroyed) {
-        return state;
-    }
-
-    events.push({ type: 'SHIP_MOVED', playerId, from, to });
-
-    return {
-        ...state,
-        ships: {
-            ...state.ships,
-            [playerId]: { ...ship, positionId: to },
-        },
-    };
 }
 
 /**
@@ -204,18 +185,35 @@ export function resolveRammingChain(
     collisionHex: TrackNodeId,
     rng: Rng,
     track: TrackGraph = defaultTrack,
+    forced = false,
+    involved = new Set<string>(),
 ): RammingResolution {
     const events: GameEvent[] = [];
+    const chainIds = new Set([...involved, rammerId, rammedId]);
 
     let hitSide = inferRamHitSideFromApproach(rammerFrom, collisionHex, track);
     hitSide = resolveFrontHitBounce(hitSide, collisionHex, track);
 
-    let nextState = applyRammingDamage(state, rammerId, rammedId, hitSide, events);
+    let nextState = applyRammingDamage(
+        state,
+        rammerId,
+        rammedId,
+        hitSide,
+        events,
+    );
 
     const rammed = nextState.ships[rammedId];
 
     if (!rammed || rammed.destroyed) {
-        nextState = voluntaryMoveRammer(nextState, rammerId, rammerFrom, collisionHex, track, events);
+        nextState = voluntaryMoveRammer(
+            nextState,
+            rammerId,
+            rammerFrom,
+            collisionHex,
+            track,
+            events,
+            forced,
+        );
         return { state: nextState, events };
     }
 
@@ -238,16 +236,25 @@ export function resolveRammingChain(
     }
 
     if (track.isWall(pushTarget)) {
-        const crushHit = resolveWallCollisionForShip(nextState, rammedId, 'rear', rng);
+        const crushHit = resolveWallCollisionForShip(
+            nextState,
+            rammedId,
+            'rear',
+            rng,
+        );
         nextState = crushHit.state;
         events.push(...crushHit.events);
     } else {
         const rammedAfterWall = nextState.ships[rammedId];
 
         if (rammedAfterWall && !rammedAfterWall.destroyed) {
-            const occupantId = getOccupyingShipId(nextState, pushTarget, rammedId);
+            const occupantId = getOccupyingShipId(
+                nextState,
+                pushTarget,
+                rammedId,
+            );
 
-            if (occupantId) {
+            if (occupantId && !chainIds.has(occupantId)) {
                 const chain = resolveRammingChain(
                     nextState,
                     rammedId,
@@ -256,16 +263,36 @@ export function resolveRammingChain(
                     pushTarget,
                     rng,
                     track,
+                    true,
+                    chainIds,
                 );
                 nextState = chain.state;
                 events.push(...chain.events);
             }
 
-            nextState = forcedMove(nextState, rammedId, collisionHex, pushTarget, events);
+            if (nextState.phase === 'finished')
+                return { state: nextState, events };
+            if (!getOccupyingShipId(nextState, pushTarget, rammedId)) {
+                nextState = moveShip(
+                    nextState,
+                    rammedId,
+                    pushTarget,
+                    events,
+                    track,
+                );
+            }
         }
     }
 
-    nextState = voluntaryMoveRammer(nextState, rammerId, rammerFrom, collisionHex, track, events);
+    nextState = voluntaryMoveRammer(
+        nextState,
+        rammerId,
+        rammerFrom,
+        collisionHex,
+        track,
+        events,
+        forced,
+    );
 
     return { state: nextState, events };
 }
@@ -277,6 +304,7 @@ function voluntaryMoveRammer(
     to: TrackNodeId,
     track: TrackGraph,
     events: GameEvent[],
+    forced: boolean,
 ): GameState {
     const ship = state.ships[rammerId];
 
@@ -284,17 +312,24 @@ function voluntaryMoveRammer(
         return state;
     }
 
-    events.push({ type: 'SHIP_MOVED', playerId: rammerId, from, to });
-
+    if (state.phase === 'finished') return state;
+    const moved = getOccupyingShipId(state, to, rammerId)
+        ? state
+        : moveShip(state, rammerId, to, events, track);
+    const changedPosition = moved.ships[rammerId].positionId !== from;
     return {
-        ...state,
+        ...moved,
         ships: {
-            ...state.ships,
+            ...moved.ships,
             [rammerId]: {
-                ...ship,
-                positionId: to,
-                movementRemaining: Math.max(0, ship.movementRemaining - 1),
-                corneringChecksRemaining: track.corneringChecksOwed(ship.chosenSpeed, to),
+                ...moved.ships[rammerId],
+                movementRemaining: forced
+                    ? ship.movementRemaining
+                    : Math.max(0, ship.movementRemaining - 1),
+                corneringChecksRemaining:
+                    forced || !changedPosition
+                        ? ship.corneringChecksRemaining
+                        : track.corneringChecksOwed(ship.chosenSpeed, to),
             },
         },
     };

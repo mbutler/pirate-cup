@@ -5,6 +5,7 @@ import type { TurnPhase } from '../../core/state/GameState';
 import type { MoveDirection } from '../../core/track/types';
 
 const PHASE_LABELS: Record<TurnPhase, string> = {
+    crew: 'Surviving crews',
     input: 'Planning',
     movement: 'Movement',
     combat: 'Combat',
@@ -18,7 +19,7 @@ export function formatPhase(phase: TurnPhase): string {
 
 export function formatPlayerLabel(ship: ShipState): string {
     const name = ship.color.charAt(0).toUpperCase() + ship.color.slice(1);
-    return `${name} (${ship.id.replace('player-', 'P')})`;
+    return `${name} (${ship.ownerId.replace('player-', 'P')})`;
 }
 
 export function formatMoveDirection(direction: MoveDirection): string {
@@ -43,7 +44,7 @@ export function formatCorneringOutcome(outcome: CorneringOutcome): string {
         case 'drift2':
             return 'Drift 2 lanes out';
         case 'moveIn1':
-            return 'May move in 1 lane';
+            return 'Move in 1 lane';
         case 'drift3':
             return 'Drift 3 lanes out';
         default:
@@ -68,11 +69,11 @@ export function formatFloggingOutcome(outcome: FloggingOutcome): string {
         case 'damage1Front':
             return '−1 bow';
         case 'move2EndTurn':
-            return '+2 moves, turn ends';
+            return '+2 moves, no more flogging';
         case 'move2':
             return '+2 moves';
         case 'move1EndTurn':
-            return '+1 move, turn ends';
+            return '+1 move, no more flogging';
         case 'damage1Front1Mast':
             return '−1 bow, −1 rowers';
         case 'mutiny':
@@ -113,7 +114,16 @@ function formatHitSide(side: string): string {
 }
 
 export function formatEventMessage(event: GameEvent): string {
+    const wallOutcomes = {
+        hull3EndChecks: '−3 hull; corner checks end',
+        mast3EndChecks: '−3 rowers; corner checks end',
+        both3EndChecks: '−3 hull, −3 rowers; corner checks end',
+        both6EndChecks: '−6 hull, −6 rowers; corner checks end',
+        crash: '−6 hull, −6 rowers; movement ends',
+    };
     switch (event.type) {
+        case 'CREW_MESSAGE':
+            return event.message;
         case 'PHASE_CHANGED':
             return `Phase: ${formatPhase(event.to)}`;
         case 'TURN_INPUT_RECEIVED':
@@ -125,33 +135,39 @@ export function formatEventMessage(event: GameEvent): string {
         case 'FLOGGING_DRAWN':
             return `Flogging: ${formatFloggingOutcome(event.outcome)}`;
         case 'WALL_COLLISION':
-            return `Wall hit (${formatHitSide(event.side)}): ${event.outcome}`;
+            return `Wall hit (${formatHitSide(event.side)}): ${wallOutcomes[event.outcome]}`;
         case 'RAMMING': {
             const rammerParts = [
                 event.rammerHullDamage
                     ? `${event.rammerHullDamage} to ${formatHitSide(event.rammerHullSide ?? 'front')}`
                     : null,
-                event.rammerMastDamage ? `${event.rammerMastDamage} to rowers` : null,
+                event.rammerMastDamage
+                    ? `${event.rammerMastDamage} to rowers`
+                    : null,
             ].filter(Boolean);
 
             return [
                 `Ram! ${event.rammedId} struck on ${formatHitSide(event.hitSide)}`,
                 `${event.rammedDamage} to ${formatHitSide(event.rammedSide)}`,
-                rammerParts.length ? `${event.rammerId}: ${rammerParts.join(', ')}` : null,
-            ].filter(Boolean).join(' · ');
+                rammerParts.length
+                    ? `${event.rammerId}: ${rammerParts.join(', ')}`
+                    : null,
+            ]
+                .filter(Boolean)
+                .join(' · ');
         }
         case 'DAMAGE_APPLIED':
             return `${event.playerId}: ${event.amount} damage to ${event.target}`;
         case 'MUTINY_STARTED':
             return event.reason === 'arena_laser'
-                ? 'Arena laser! Last-place rowers snap — MUTINY!'
+                ? 'Warning shot! Last-place rowers snap — MUTINY!'
                 : event.reason === 'critical_damage'
                   ? 'Critical damage — rowers erupt into MUTINY!'
                   : event.reason === 'flog'
                     ? 'Flogging backfires — MUTINY!'
                     : 'Mutiny! Rowers seize the ship!';
         case 'MUTINY_SPEED_ROLLED':
-            return `Frenzied surge — speed ${event.speed} (sails + d10 ${event.roll})`;
+            return `Mutinous surge — speed ${event.speed} (max speed + d10 ${event.roll})`;
         case 'MUTINY_ENDED':
             return event.reason === 'cooldown'
                 ? 'Captain regains control — mutiny ends'
@@ -162,17 +178,27 @@ export function formatEventMessage(event: GameEvent): string {
                     : 'Mutiny ended';
         case 'FRENZY_COOLDOWN_ROLL':
             return event.calmed
-                ? `Cooldown d10 ${event.roll} ≤ captain skill ${event.skill} — rowers calm`
-                : `Cooldown d10 ${event.roll} > captain skill ${event.skill} — still mutinous`;
+                ? `Cooldown d10 ${event.roll} ≤ helm skill ${event.skill} — rowers calm`
+                : `Cooldown d10 ${event.roll} > helm skill ${event.skill} — still mutinous`;
         case 'ARENA_LASER':
-            return 'The stadium laser tags the last-place ship!';
+            return 'A warning shot sends the last-place crew into mutiny!';
+        case 'ATTACK_DECLARED':
+            return event.targetId
+                ? `${event.attackerId} locks a boarding strike on ${event.targetId}`
+                : `${event.attackerId} holds fire`;
+        case 'BOARDER_DEFEATED':
+            return `${event.playerId} loses their boarder — ship remains in the race`;
         case 'COMBAT_RESOLVED':
-            return `Boarders clash — ${event.damage} damage`;
+            return `${event.attackerId} strikes ${event.targetId} — ${event.damage} boarder damage`;
         case 'SHIP_DESTROYED':
             return 'Ship destroyed!';
+        case 'LAP_COMPLETED':
+            return `${event.playerId} completes lap ${event.lap}!`;
+        case 'RACE_DRAWN':
+            return 'All ships wrecked — the race ends without a winner.';
         case 'RACE_WON':
             return `${event.playerId} wins the race!`;
         default:
-            return event.type;
+            return '';
     }
 }

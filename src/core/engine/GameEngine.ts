@@ -4,13 +4,18 @@ import { drawCornering, drawFlogging } from '../cards/decks';
 import type { Rng } from '../rng/Rng';
 import type { MoveDirection } from '../track/types';
 import {
-    computeMovementOrder,
     createInitialState,
     type GameState,
+    type TurnInput,
 } from '../state/GameState';
 import { applyHullDamage, applyMastDamage } from '../rules/damage';
 import { applyMove, prepareShipForMovement } from '../rules/movement';
-import { queueAttack, resolveCombatPhase } from '../rules/combat';
+import {
+    beginCombat,
+    nextCombatCaptain,
+    queueAttack,
+    resolveCombatPhase,
+} from '../rules/combat';
 import {
     frenzySpeed,
     integratePostDamage,
@@ -19,6 +24,12 @@ import {
     resolveCleanupPhase,
 } from '../rules/frenzy';
 import { resolveWallCollisionForShip } from '../rules/wallCollision';
+import {
+    rescueWreckedCrews,
+    beginCrewPhase,
+    resolveCrewAction,
+} from '../rules/crew';
+import { finishRace } from '../rules/race';
 import { defaultTrack } from '../track/TrackGraph';
 
 export interface ReduceResult {
@@ -35,11 +46,101 @@ export function reduce(
     action: GameAction,
     rng: Rng,
 ): ReduceResult {
+    if (state.phase === 'finished') return { state, events: [] };
+    // Validate commands at the rule boundary, not just in the local controls.
+    if ('playerId' in action) {
+        const ship = state.ships[action.playerId];
+        if (!ship || ship.destroyed || state.activePlayerId !== action.playerId)
+            return { state, events: [] };
+        if (action.type === 'SUBMIT_TURN_INPUT') {
+            if (state.phase !== 'input' || !Number.isFinite(action.input.speed))
+                return { state, events: [] };
+        } else {
+            if (state.phase !== 'movement') return { state, events: [] };
+            if (
+                action.type === 'CHOOSE_MOVE' &&
+                (ship.movementRemaining <= 0 ||
+                    !['laneIn', 'forward', 'laneOut'].includes(
+                        action.direction,
+                    ) ||
+                    (isInFrenzy(ship) && action.direction !== 'forward'))
+            )
+                return { state, events: [] };
+            if (
+                (action.type === 'FLOG_DECISION' ||
+                    action.type === 'RESOLVE_FLOGGING') &&
+                (ship.movementRemaining > 0 || isInFrenzy(ship))
+            )
+                return { state, events: [] };
+        }
+    }
+    if (
+        [
+            'DECLARE_ATTACK',
+            'PASS_ATTACK',
+            'RESOLVE_COMBAT',
+            'END_TURN',
+        ].includes(action.type) &&
+        state.phase !== 'combat'
+    )
+        return { state, events: [] };
+    const result =
+        'crewId' in action
+            ? resolveCrewAction(state, action, rng)
+            : reduceAction(state, action, rng);
+    result.state = rescueWreckedCrews(result.state, result.events);
+    if (
+        result.state.phase === 'combat' &&
+        state.phase !== 'combat' &&
+        state.phase !== 'crew'
+    ) {
+        result.state = beginCrewPhase(result.state);
+        if (result.state.phase === 'crew') {
+            result.events = result.events.map((event) =>
+                event.type === 'PHASE_CHANGED' && event.to === 'combat'
+                    ? { ...event, to: 'crew' }
+                    : event,
+            );
+        }
+    }
+    if (result.state.phase === 'finished') return result;
+    const alive = Object.values(result.state.ships).filter(
+        (ship) => !ship.destroyed,
+    );
+    if (
+        alive.length === 0 ||
+        (alive.length === 1 &&
+            Object.keys(result.state.displacedCrew).length === 0)
+    ) {
+        result.state = finishRace(
+            result.state,
+            alive[0]?.id ?? null,
+            alive.length ? 'last_ship' : 'all_wrecked',
+            result.events,
+        );
+    } else if (
+        result.state.activePlayerId &&
+        result.state.ships[result.state.activePlayerId].destroyed
+    ) {
+        return advanceAfterMovement(
+            result.state,
+            result.state.activePlayerId,
+            result.events,
+        );
+    }
+    return result;
+}
+
+function reduceAction(
+    state: GameState,
+    action: GameAction,
+    rng: Rng,
+): ReduceResult {
     switch (action.type) {
         case 'SUBMIT_TURN_INPUT':
             return submitTurnInput(state, action.playerId, action.input, rng);
         case 'BEGIN_MOVEMENT_PHASE':
-            return beginMovementPhase(state);
+            return { state, events: [] }; // Sequential play begins with SUBMIT_TURN_INPUT.
         case 'CHOOSE_MOVE':
             return chooseMove(state, action.playerId, action.direction, rng);
         case 'RESOLVE_CORNERING':
@@ -48,13 +149,27 @@ export function reduce(
             return flogDecision(state, action.playerId, action.flog, rng);
         case 'RESOLVE_FLOGGING':
             return resolveFlogging(state, action.playerId, rng);
-        case 'DECLARE_ATTACK':
+        case 'PASS_ATTACK':
+        case 'DECLARE_ATTACK': {
+            const targetId =
+                action.type === 'PASS_ATTACK' ? null : action.targetId;
+            const next = queueAttack(state, action.attackerId, targetId);
             return {
-                state: queueAttack(state, action.attackerId, action.targetId),
-                events: [],
+                state: next,
+                events:
+                    next === state
+                        ? []
+                        : [
+                              {
+                                  type: 'ATTACK_DECLARED',
+                                  attackerId: action.attackerId,
+                                  targetId,
+                              },
+                          ],
             };
+        }
         case 'RESOLVE_COMBAT':
-            return resolveCombatPhase(state);
+            return endTurn(state, rng);
         case 'END_TURN':
             return endTurn(state, rng);
         default:
@@ -65,7 +180,7 @@ export function reduce(
 function submitTurnInput(
     state: GameState,
     playerId: string,
-    input: NonNullable<GameAction extends { type: 'SUBMIT_TURN_INPUT'; input: infer I } ? I : never>,
+    input: TurnInput,
     rng: Rng,
 ): ReduceResult {
     if (state.phase !== 'input' || state.activePlayerId !== playerId) {
@@ -92,7 +207,10 @@ function submitTurnInput(
             speed: rolled.speed,
         });
     } else {
-        clampedSpeed = Math.max(0, Math.min(input.speed, ship.maxSpeed));
+        clampedSpeed = Math.max(
+            0,
+            Math.min(Math.floor(input.speed), ship.maxSpeed),
+        );
     }
 
     let nextState: GameState = {
@@ -137,32 +255,6 @@ function submitTurnInput(
     };
 }
 
-function beginMovementPhase(state: GameState): ReduceResult {
-    const movementOrder = computeMovementOrder(state);
-    const firstPlayerId = movementOrder[0];
-
-    if (!firstPlayerId) {
-        return {
-            state: { ...state, phase: 'combat' },
-            events: [{ type: 'PHASE_CHANGED', from: 'input', to: 'combat' }],
-        };
-    }
-
-    let nextState: GameState = {
-        ...state,
-        phase: 'movement',
-        movementOrder,
-        movementIndex: 0,
-    };
-
-    nextState = prepareShipForMovement(nextState, firstPlayerId);
-
-    return {
-        state: { ...nextState, activePlayerId: firstPlayerId },
-        events: [{ type: 'PHASE_CHANGED', from: 'input', to: 'movement' }],
-    };
-}
-
 function chooseMove(
     state: GameState,
     playerId: string,
@@ -170,9 +262,18 @@ function chooseMove(
     rng: Rng,
 ): ReduceResult {
     const shipBefore = state.ships[playerId];
-    const { state: movedState, events } = applyMove(state, playerId, direction, defaultTrack, rng);
+    const { state: movedState, events } = applyMove(
+        state,
+        playerId,
+        direction,
+        defaultTrack,
+        rng,
+    );
     const ship = movedState.ships[playerId];
 
+    if (movedState.phase === 'finished') return { state: movedState, events };
+    if (ship?.destroyed)
+        return advanceAfterMovement(movedState, playerId, events);
     if (!ship) {
         return { state: movedState, events };
     }
@@ -214,7 +315,12 @@ function resolveCornering(
 ): ReduceResult {
     const ship = state.ships[playerId];
 
-    if (!ship || ship.corneringChecksRemaining <= 0) {
+    if (
+        state.phase === 'finished' ||
+        !ship ||
+        ship.destroyed ||
+        ship.corneringChecksRemaining <= 0
+    ) {
         return { state, events: priorEvents };
     }
 
@@ -239,17 +345,22 @@ function resolveCornering(
     }
 
     if (outcome.startsWith('drift') || outcome === 'moveIn1') {
-        const steps = outcome === 'drift1' || outcome === 'moveIn1'
-            ? 1
-            : outcome === 'drift2'
-              ? 2
-              : 3;
-        const driftDirection: MoveDirection = outcome === 'moveIn1' ? 'laneIn' : 'laneOut';
+        const steps =
+            outcome === 'drift1' || outcome === 'moveIn1'
+                ? 1
+                : outcome === 'drift2'
+                  ? 2
+                  : 3;
+        const driftDirection: MoveDirection =
+            outcome === 'moveIn1' ? 'laneIn' : 'laneOut';
 
         nextShip = { ...nextShip, driftRemaining: steps };
 
         return resolveDrift(
-            { ...nextState, ships: { ...nextState.ships, [playerId]: nextShip } },
+            {
+                ...nextState,
+                ships: { ...nextState.ships, [playerId]: nextShip },
+            },
             playerId,
             driftDirection,
             rng,
@@ -277,7 +388,12 @@ function resolveDrift(
 ): ReduceResult {
     const ship = state.ships[playerId];
 
-    if (!ship || ship.driftRemaining <= 0) {
+    if (
+        state.phase === 'finished' ||
+        !ship ||
+        ship.destroyed ||
+        ship.driftRemaining <= 0
+    ) {
         return { state, events: priorEvents };
     }
 
@@ -285,18 +401,37 @@ function resolveDrift(
 
     if (defaultTrack.isWall(target)) {
         const side = direction === 'laneIn' ? 'left' : 'right';
-        const resolved = resolveWallCollisionForShip(state, playerId, side, rng);
-
-        return advanceAfterMovement(
-            resolved.state,
+        const resolved = resolveWallCollisionForShip(
+            state,
             playerId,
-            [...priorEvents, ...resolved.events],
+            side,
+            rng,
         );
+
+        const events = [...priorEvents, ...resolved.events];
+        const afterWall = resolved.state.ships[playerId];
+        return afterWall.destroyed || afterWall.movementRemaining <= 0
+            ? advanceAfterMovement(resolved.state, playerId, events)
+            : { state: resolved.state, events };
     }
 
-    const { state: movedState, events: moveEvents } = applyMove(state, playerId, direction, defaultTrack, rng);
+    const { state: movedState, events: moveEvents } = applyMove(
+        state,
+        playerId,
+        direction,
+        defaultTrack,
+        rng,
+        true,
+    );
     const movedShip = movedState.ships[playerId];
 
+    if (movedState.phase === 'finished')
+        return { state: movedState, events: [...priorEvents, ...moveEvents] };
+    if (movedShip?.destroyed)
+        return advanceAfterMovement(movedState, playerId, [
+            ...priorEvents,
+            ...moveEvents,
+        ]);
     if (!movedShip) {
         return { state: movedState, events: [...priorEvents, ...moveEvents] };
     }
@@ -328,7 +463,12 @@ function resolveDrift(
     return { state: nextState, events };
 }
 
-function flogDecision(state: GameState, playerId: string, flog: boolean, rng: Rng): ReduceResult {
+function flogDecision(
+    state: GameState,
+    playerId: string,
+    flog: boolean,
+    rng: Rng,
+): ReduceResult {
     if (!flog) {
         const ship = state.ships[playerId];
 
@@ -353,7 +493,11 @@ function flogDecision(state: GameState, playerId: string, flog: boolean, rng: Rn
     return resolveFlogging(state, playerId, rng);
 }
 
-function resolveFlogging(state: GameState, playerId: string, rng: Rng): ReduceResult {
+function resolveFlogging(
+    state: GameState,
+    playerId: string,
+    rng: Rng,
+): ReduceResult {
     const ship = state.ships[playerId];
 
     if (!ship || ship.flogAttemptsRemaining <= 0) {
@@ -400,13 +544,21 @@ function resolveFlogging(state: GameState, playerId: string, rng: Rng): ReduceRe
             flogDamage = 1;
             break;
         case 'move2EndTurn':
-            nextShip = { ...nextShip, bonusMovement: 2, flogAttemptsRemaining: 0 };
+            nextShip = {
+                ...nextShip,
+                bonusMovement: 2,
+                flogAttemptsRemaining: 0,
+            };
             break;
         case 'move2':
             nextShip = { ...nextShip, bonusMovement: 2 };
             break;
         case 'move1EndTurn':
-            nextShip = { ...nextShip, bonusMovement: 1, flogAttemptsRemaining: 0 };
+            nextShip = {
+                ...nextShip,
+                bonusMovement: 1,
+                flogAttemptsRemaining: 0,
+            };
             break;
         case 'damage1Front1Mast':
             nextShip = applyHullDamage(nextShip, 'front', 1).ship;
@@ -434,19 +586,23 @@ function resolveFlogging(state: GameState, playerId: string, rng: Rng): ReduceRe
         ships: { ...state.ships, [playerId]: nextShip },
     };
 
+    if (nextShip.destroyed) events.push({ type: 'SHIP_DESTROYED', playerId });
     if (flogDamage > 0) {
-        nextState = integratePostDamage(nextState, playerId, flogDamage, events);
+        nextState = integratePostDamage(
+            nextState,
+            playerId,
+            flogDamage,
+            events,
+        );
     }
 
-    if (nextShip.bonusMovement > 0 || (nextShip.movementRemaining > 0 && nextShip.flogAttemptsRemaining > 0)) {
-        return { state: nextState, events };
-    }
-
-    if (nextShip.movementRemaining > 0) {
-        return { state: nextState, events };
-    }
-
-    if (nextShip.flogAttemptsRemaining > 0 && outcome !== 'mutiny') {
+    const resolvedShip = nextState.ships[playerId];
+    if (
+        !resolvedShip.destroyed &&
+        (resolvedShip.movementRemaining > 0 ||
+            (resolvedShip.flogAttemptsRemaining > 0 &&
+                !isInFrenzy(resolvedShip)))
+    ) {
         return { state: nextState, events };
     }
 
@@ -462,6 +618,7 @@ function advanceAfterMovement(
 
     if (
         ship &&
+        !ship.destroyed &&
         ship.movementRemaining <= 0 &&
         ship.flogAttemptsRemaining > 0 &&
         !isInFrenzy(ship)
@@ -472,25 +629,22 @@ function advanceAfterMovement(
         };
     }
 
-    const playerIds = Object.keys(state.ships).filter((id) => !state.ships[id]?.destroyed);
+    if (state.phase === 'finished') return { state, events: priorEvents };
+    const playerIds = Object.keys(state.ships);
     const currentIndex = playerIds.indexOf(playerId);
-    const nextIndex = currentIndex + 1;
+    const nextPlayerId = playerIds
+        .slice(currentIndex + 1)
+        .find((id) => !state.ships[id].destroyed);
 
-    if (nextIndex >= playerIds.length) {
+    if (!nextPlayerId) {
         return {
-            state: {
-                ...state,
-                phase: 'combat',
-                activePlayerId: null,
-            },
+            state: beginCombat(state),
             events: [
                 ...priorEvents,
                 { type: 'PHASE_CHANGED', from: 'movement', to: 'combat' },
             ],
         };
     }
-
-    const nextPlayerId = playerIds[nextIndex];
 
     return {
         state: {
@@ -506,13 +660,15 @@ function advanceAfterMovement(
 }
 
 function endTurn(state: GameState, rng: Rng): ReduceResult {
-    if (state.phase !== 'combat') {
+    if (state.phase !== 'combat' || nextCombatCaptain(state) !== null) {
         return { state, events: [] };
     }
 
     const combat = resolveCombatPhase(state);
     const cleanup = resolveCleanupPhase(combat.state, rng);
-    const firstPlayerId = Object.keys(cleanup.state.ships)[0] ?? null;
+    const firstPlayerId =
+        Object.values(cleanup.state.ships).find((ship) => !ship.destroyed)
+            ?.id ?? null;
 
     return {
         state: {
@@ -531,12 +687,6 @@ function endTurn(state: GameState, rng: Rng): ReduceResult {
             { type: 'PHASE_CHANGED', from: 'cleanup', to: 'input' },
         ],
     };
-}
-
-function nextActivePlayer(state: GameState, currentId: string): string | null {
-    const ids = Object.keys(state.ships).filter((id) => !state.ships[id]?.destroyed);
-    const index = ids.indexOf(currentId);
-    return ids[(index + 1) % ids.length] ?? null;
 }
 
 export { createInitialState };

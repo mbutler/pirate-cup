@@ -1,15 +1,1176 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Libre+Caslon+Display&display=swap');
+
+:root {
+    color-scheme: dark;
+    --ink: #102c32;
+    --deep: #0b2229;
+    --panel: #15333a;
+    --line: #365056;
+    --cream: #eee8d4;
+    --muted: #9aafb0;
+    --gold: #e4be77;
+    --serif: 'Libre Caslon Display', Georgia, serif;
+    --sans: 'DM Sans', Arial, sans-serif;
+}
+* {
+    box-sizing: border-box;
+}
 body {
     margin: 0;
-    padding: 0;
-    color: rgba(255, 255, 255, 0.87);
-    background-color: #0f0f0f;
+    background: var(--deep);
+    color: var(--cream);
+    font-family: var(--sans);
+    font-size: 14px;
 }
-
+button,
+a {
+    -webkit-tap-highlight-color: transparent;
+}
+button {
+    font: inherit;
+    cursor: pointer;
+    color: inherit;
+    border: 1px solid var(--line);
+    background: transparent;
+    transition:
+        background 0.15s,
+        border-color 0.15s,
+        transform 0.15s;
+}
+button:hover:not(:disabled) {
+    border-color: var(--gold);
+    background: #ffffff0a;
+}
+button:active:not(:disabled) {
+    transform: translateY(1px);
+}
+button:disabled {
+    cursor: wait;
+    opacity: 0.45;
+}
+button:focus-visible,
+a:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 4px;
+}
+h1,
+h2,
+p {
+    margin: 0;
+}
+button,
+select {
+    touch-action: manipulation;
+}
 #app {
     width: 100%;
-    height: 100vh;
+    height: 100dvh;
+    min-height: 680px;
+    position: relative;
     overflow: hidden;
+}
+#game-container {
+    position: absolute;
+    inset: 160px 20px 275px;
+    display: block;
+    background: #368e98;
+    border: 1px solid #87bdac55;
+    box-shadow: 0 14px 45px #0002;
+    overflow: hidden;
+}
+#game-container canvas {
+    display: block;
+}
+.eyebrow {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    line-height: 1.7;
+}
+.gold {
+    color: var(--gold);
+}
+.wordmark {
     display: flex;
-    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--serif);
+    font-size: 25px;
+    letter-spacing: 0.07em;
+    white-space: nowrap;
+    text-decoration: none;
+    color: var(--cream);
+}
+.wordmark svg {
+    width: 35px;
+    height: 35px;
+    color: var(--gold);
+}
+.primary,
+.secondary {
+    min-height: 46px;
+    padding: 12px 21px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+    font-weight: 600;
+    border-radius: 3px;
+}
+.primary {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: var(--deep);
+}
+.primary:hover:not(:disabled) {
+    background: #efd098;
+    border-color: #efd098;
+}
+.primary span,
+.secondary span {
+    font-size: 20px;
+}
+.secondary {
+    background: #ffffff05;
+}
+.quiet {
+    border: 0;
+    padding: 10px;
+    color: #d1d9d3;
+    font-size: 12px;
+    border-radius: 3px;
+}
+.ship-icon {
+    display: inline-block;
+    width: 46px;
+    height: 79px;
+    background-repeat: no-repeat;
+    background-size: 276px 79px;
+    flex-shrink: 0;
+}
+.harbor {
+    position: absolute;
+    inset: 0;
+    overflow: auto;
+    background:
+        radial-gradient(ellipse at 80% 50%, #254b4c 0%, transparent 60%),
+        var(--deep);
+    padding: 0 5vw;
+    z-index: 10;
+}
+.harbor-header {
+    height: 96px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.harbor-header > .eyebrow {
+    color: var(--muted);
+}
+.harbor-main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7vw;
+    align-items: center;
+    max-width: 1400px;
+    margin: auto;
+    min-height: calc(100dvh - 210px);
+    padding: 45px 0;
+}
+.harbor-copy h1 {
+    font: clamp(64px, 7vw, 112px)/0.96 var(--serif);
+    letter-spacing: -0.035em;
+    margin: 23px 0;
+}
+.harbor-copy h1 em {
+    color: var(--gold);
+    font-weight: 400;
+}
+.intro {
+    font-size: 16px;
+    line-height: 1.7;
+    color: #b9c6c0;
+}
+.setup {
+    margin-top: 36px;
+    max-width: 425px;
+}
+.setup-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--muted);
+    font-size: 11px;
+}
+.player-picker {
+    display: flex;
+    gap: 8px;
+    margin: 12px 0 16px;
+}
+.player-picker button {
+    flex: 1;
+    height: 63px;
+    border-radius: 3px;
+    font-size: 23px;
+    font-family: var(--serif);
+}
+.player-picker button span {
+    display: block;
+    font: 10px var(--sans);
+    color: var(--muted);
+    margin-top: 4px;
+}
+.player-picker button[aria-pressed='true'] {
+    border-color: var(--gold);
+    background: #e4be7710;
+    color: var(--gold);
+}
+.set-sail {
+    width: 100%;
+    height: 54px;
+    font-size: 15px;
+}
+.menu-hint {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 14px;
+}
+.chart-card {
+    border: 1px solid #7e98865e;
+    padding: 22px;
+    background: #b2c39908;
+    transform: rotate(2deg);
+    box-shadow: 0 30px 60px #0002;
+}
+.chart-heading {
+    display: flex;
+    justify-content: space-between;
+    color: #b7c8b8;
+    font-size: 9px;
+    letter-spacing: 0.08em;
     align-items: center;
 }
+.chart-art {
+    height: 325px;
+    position: relative;
+    overflow: hidden;
+    margin: 20px 0;
+    background-image:
+        linear-gradient(#aac4b10b 1px, transparent 1px),
+        linear-gradient(90deg, #aac4b10b 1px, transparent 1px);
+    background-size: 28px 28px;
+}
+.chart-route {
+    position: absolute;
+    inset: 67px 5px 58px;
+    border: 1px dashed #a8b89c6b;
+    border-radius: 50%;
+    box-shadow:
+        0 0 0 20px #a8b89c04,
+        0 0 0 40px #a8b89c04;
+}
+.chart-island {
+    position: absolute;
+    width: 31%;
+    height: 85px;
+    top: 132px;
+    background: #a6b99726;
+    border: 1px solid #bfcab266;
+    border-radius: 40% 25% 45% 20%;
+    box-shadow:
+        0 0 0 9px #a6b9970a,
+        0 0 0 20px #a6b99707;
+}
+.island-one {
+    left: 10%;
+    transform: rotate(-8deg);
+}
+.island-two {
+    right: 9%;
+    transform: rotate(6deg);
+}
+.chart-ship {
+    position: absolute;
+    filter: drop-shadow(4px 5px 4px #0005);
+}
+.ship-one {
+    top: 49px;
+    left: 60%;
+    transform: rotate(-88deg);
+}
+.ship-two {
+    top: 64px;
+    left: 41%;
+    transform: rotate(-88deg);
+}
+.ship-three {
+    bottom: 9px;
+    left: 26%;
+    transform: rotate(92deg);
+}
+.chart-compass {
+    position: absolute;
+    right: 10px;
+    bottom: 0;
+    width: 61px;
+    color: #bec6a85c;
+}
+.chart-sea {
+    position: absolute;
+    top: 11px;
+    left: 15px;
+    font: italic 14px var(--serif);
+    letter-spacing: 0.15em;
+    color: #aabf9a88;
+}
+.chart-caption {
+    border-top: 1px solid #72877455;
+    padding-top: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font: 24px/1.25 var(--serif);
+    color: #b9c7b6;
+}
+.chart-caption strong {
+    font-weight: 400;
+    color: var(--cream);
+}
+.chart-number {
+    font: 11px var(--sans);
+    letter-spacing: 0.1em;
+}
+.harbor-footer {
+    border-top: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 5vw;
+    min-height: 100px;
+}
+.harbor-footer > div {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.harbor-footer b {
+    font: 28px var(--serif);
+    color: var(--gold);
+}
+.harbor-footer span {
+    font-size: 12px;
+}
+.harbor-footer small {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 4px;
+}
+.harbor-footer .prototype-note {
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 0.13em;
+    margin-left: auto;
+}
+.race-ui {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+.race-ui button,
+.race-ui dialog {
+    pointer-events: auto;
+}
+.race-header {
+    position: absolute;
+    top: 0;
+    left: 28px;
+    right: 28px;
+    height: 76px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--line);
+    gap: 20px;
+}
+.race-header .wordmark {
+    font-size: 23px;
+}
+.race-title {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+}
+.race-title span {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: 0;
+    margin-top: 5px;
+}
+.race-header nav {
+    display: flex;
+    gap: 8px;
+}
+.fleet-strip {
+    position: absolute;
+    top: 87px;
+    left: 28px;
+    right: 28px;
+    display: flex;
+    gap: 8px;
+    height: 61px;
+}
+.fleet-ship {
+    flex: 1;
+    min-width: 0;
+    padding: 7px 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 2px solid #365056;
+    background: #ffffff03;
+    transition: background 0.2s;
+}
+.fleet-ship .ship-icon {
+    width: 28px;
+    height: 46px;
+    background-size: 168px 48px;
+}
+.fleet-ship strong {
+    text-transform: capitalize;
+    font-size: 12px;
+    font-weight: 500;
+    display: block;
+}
+.fleet-ship small {
+    color: var(--muted);
+    font-size: 9px;
+    margin-left: 7px;
+}
+.fleet-ship div > span {
+    font-size: 10px;
+    color: var(--muted);
+    display: block;
+    margin-top: 5px;
+}
+.fleet-ship.is-active {
+    background: #ffffff08;
+    border-color: var(--ship-color);
+}
+.fleet-ship.is-active strong,
+.fleet-ship.is-active div > span {
+    color: var(--ship-color);
+}
+.fleet-ship i {
+    width: 5px;
+    height: 5px;
+    margin-left: auto;
+    border-radius: 50%;
+    background: var(--ship-color);
+    opacity: 0.45;
+}
+.fleet-ship.is-active i {
+    opacity: 1;
+    box-shadow: 0 0 10px var(--ship-color);
+}
+.fleet-ship.is-wrecked {
+    opacity: 0.4;
+}
+.course-label {
+    position: absolute;
+    top: 176px;
+    left: 40px;
+    color: #e1f1e5;
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    text-shadow: 0 1px 4px #174645;
+}
+.course-label > span + span {
+    font-size: 10px;
+    opacity: 0.7;
+}
+.course-legend {
+    position: absolute;
+    bottom: 288px;
+    right: 38px;
+    display: flex;
+    gap: 16px;
+    font-size: 10px;
+    color: #d9f0dd;
+    text-shadow: 0 1px 4px #174645;
+}
+.legend-dot {
+    width: 6px;
+    height: 6px;
+    display: inline-block;
+    border: 1px solid #d1efac;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+.legend-dot.amber {
+    border-color: #f5d397;
+}
+.command-deck {
+    position: absolute;
+    bottom: 46px;
+    height: 214px;
+    left: 28px;
+    right: 28px;
+    display: grid;
+    grid-template-columns: 270px 1fr;
+    gap: 30px;
+}
+.captain-status {
+    border-right: 1px solid var(--line);
+    padding-right: 28px;
+}
+.captain-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 57px;
+}
+.captain-heading .ship-icon {
+    transform: scale(0.65);
+    margin: -12px -8px -12px -8px;
+}
+.captain-heading > svg {
+    width: 40px;
+    height: 40px;
+    color: var(--gold);
+}
+.captain-heading h2 {
+    font: 27px var(--serif);
+    text-transform: capitalize;
+    color: var(--ship-color);
+}
+.captain-heading .eyebrow {
+    font-size: 8px;
+    color: var(--muted);
+}
+.hull-meter {
+    margin: 12px 0;
+}
+.hull-meter > span {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--muted);
+}
+.hull-meter b {
+    color: var(--cream);
+    font-weight: 400;
+}
+.meter-track {
+    height: 3px;
+    background: #405358;
+    margin-top: 8px;
+}
+.meter-track i {
+    display: block;
+    height: 100%;
+    background: var(--ship-color);
+}
+.ship-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    margin-top: 16px;
+}
+.ship-stats span {
+    font-size: 9px;
+    color: var(--muted);
+}
+.ship-stats b {
+    display: block;
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--cream);
+    margin-top: 4px;
+}
+.crew-line {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 16px;
+    font-size: 9px;
+    color: var(--muted);
+}
+.crew-line b {
+    font-weight: 500;
+    color: var(--cream);
+    margin-left: 3px;
+}
+.temperament {
+    text-transform: capitalize;
+    color: #a7c9ad;
+}
+.command-main {
+    padding-top: 4px;
+    min-width: 0;
+}
+.command-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 59px;
+}
+.command-heading h2 {
+    font: 33px/1.1 var(--serif);
+    margin-top: 3px;
+    letter-spacing: -0.01em;
+}
+.command-heading .eyebrow {
+    font-size: 9px;
+}
+.speed-readout {
+    font: 46px/1 var(--serif);
+    color: var(--gold);
+    padding-left: 15px;
+    white-space: nowrap;
+}
+.speed-readout small {
+    font: 12px var(--sans);
+    color: var(--muted);
+}
+.command-detail {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-top: 7px;
+    min-height: 18px;
+}
+.command-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+}
+.command-actions > .primary {
+    margin-left: auto;
+    min-width: 164px;
+}
+.speed-picker {
+    display: flex;
+    gap: 5px;
+    flex: 1;
+}
+.speed-picker button {
+    flex: 1;
+    max-width: 55px;
+    min-width: 30px;
+    height: 44px;
+    border-radius: 3px;
+    font-size: 16px;
+    color: #bacbc8;
+}
+.speed-picker button[aria-pressed='true'],
+.move-choices button[aria-pressed='true'] {
+    color: var(--gold);
+    border-color: var(--gold);
+    background: #e4be7712;
+}
+.keyboard-hint {
+    font-size: 10px;
+    color: #849d9f;
+    margin-top: 12px;
+}
+.move-choices {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+}
+.move-choices button {
+    text-align: left;
+    flex: 1;
+    padding: 9px 12px;
+    border-radius: 3px;
+    min-height: 49px;
+}
+.move-choices strong {
+    font-size: 11px;
+    font-weight: 500;
+    display: block;
+}
+.move-choices small {
+    font-size: 9px;
+    display: block;
+    color: var(--muted);
+    margin-top: 4px;
+}
+.move-choices .risky small {
+    color: var(--gold);
+}
+.decision-buttons {
+    display: flex;
+    gap: 10px;
+}
+.risk-note {
+    font-size: 10px;
+    color: var(--muted);
+}
+.risk-button {
+    background: #cfa66e;
+}
+.underway {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 0;
+    color: var(--gold);
+}
+.signal {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--gold);
+    animation: pulse 1.5s infinite;
+}
+.race-footer {
+    position: absolute;
+    bottom: 0;
+    left: 28px;
+    right: 28px;
+    height: 38px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    font-size: 9px;
+    color: var(--muted);
+}
+.round-status {
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+}
+.log-button {
+    border: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: 1;
+    min-width: 0;
+    padding: 8px 0;
+    gap: 20px;
+    text-align: left;
+    font-size: 10px;
+    color: var(--muted);
+}
+.log-button > span:last-child {
+    white-space: nowrap;
+    color: var(--cream);
+}
+.log-message {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.game-dialog {
+    width: min(560px, calc(100vw - 32px));
+    max-height: 85dvh;
+    border: 1px solid #7b7960;
+    border-radius: 5px;
+    padding: 38px;
+    background: var(--ink);
+    color: var(--cream);
+    box-shadow: 0 30px 100px #0008;
+}
+.game-dialog::backdrop {
+    background: #05181ed9;
+    backdrop-filter: blur(6px);
+}
+.game-dialog h2 {
+    font: 44px/1.1 var(--serif);
+    margin: 10px 0 24px;
+}
+.game-dialog p {
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--muted);
+}
+.game-dialog p.eyebrow {
+    font-size: 9px;
+    color: var(--gold);
+}
+.dialog-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+}
+.dialog-done {
+    margin-top: 24px;
+}
+.help-list {
+    padding-left: 20px;
+}
+.help-list li {
+    padding-left: 8px;
+    font-size: 12px;
+    line-height: 1.8;
+    margin-bottom: 13px;
+    color: #b9cac8;
+}
+.help-list strong {
+    color: var(--cream);
+}
+.help-list li::marker {
+    color: var(--gold);
+}
+.game-dialog .playtest-disclosure {
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+    font-size: 11px;
+}
+.history-list {
+    padding: 0;
+    list-style: none;
+}
+.history-list li {
+    font-size: 12px;
+    line-height: 1.5;
+    border-bottom: 1px solid var(--line);
+    padding: 11px 0;
+    color: #bdcfcb;
+}
+.game-dialog > .primary {
+    margin-top: 24px;
+}
+.round-note {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.8;
+    margin-top: 18px;
+}
+@keyframes pulse {
+    50% {
+        opacity: 0.3;
+    }
+}
+@media (min-width: 1500px) {
+    .command-deck {
+        left: 5vw;
+        right: 5vw;
+        grid-template-columns: 320px 1fr;
+        gap: 45px;
+    }
+    .command-main {
+        max-width: 1000px;
+    }
+    .command-heading h2 {
+        font-size: 38px;
+    }
+    .command-detail {
+        font-size: 14px;
+    }
+    .speed-picker button {
+        max-width: 65px;
+    }
+    .race-header,
+    .fleet-strip {
+        left: 3vw;
+        right: 3vw;
+    }
+    #game-container {
+        left: 3vw;
+        right: 3vw;
+    }
+    .course-label {
+        left: calc(3vw + 20px);
+    }
+}
+@media (max-width: 1000px) {
+    .race-title {
+        display: none;
+    }
+    .race-header {
+        left: 20px;
+        right: 20px;
+    }
+    .race-header nav {
+        gap: 0;
+    }
+    .fleet-strip {
+        left: 20px;
+        right: 20px;
+    }
+    .fleet-ship {
+        padding: 7px;
+        gap: 4px;
+    }
+    .fleet-ship small {
+        display: none;
+    }
+    .command-deck {
+        grid-template-columns: 210px 1fr;
+        gap: 20px;
+        left: 20px;
+        right: 20px;
+    }
+    .captain-status {
+        padding-right: 20px;
+    }
+    .command-heading h2 {
+        font-size: 29px;
+    }
+    .command-actions {
+        gap: 8px;
+    }
+    .command-actions > .primary {
+        min-width: 130px;
+        font-size: 12px;
+        padding: 12px;
+    }
+    .speed-picker {
+        gap: 3px;
+    }
+    .speed-picker button {
+        min-width: 24px;
+    }
+    .harbor-main {
+        gap: 4vw;
+    }
+    .chart-art {
+        height: 290px;
+    }
+    .harbor-footer {
+        gap: 3vw;
+    }
+    .harbor-footer .prototype-note {
+        display: none;
+    }
+    .risk-note {
+        font-size: 9px;
+    }
+}
+@media (max-width: 740px) {
+    #app {
+        min-height: 820px;
+        height: max(100dvh, 820px);
+    }
+    body {
+        overflow: auto;
+    }
+    .harbor {
+        padding: 0 24px;
+    }
+    .harbor-header {
+        height: 76px;
+    }
+    .harbor-header > .eyebrow {
+        display: none;
+    }
+    .harbor-main {
+        grid-template-columns: 1fr;
+        padding: 35px 0;
+        min-height: 0;
+    }
+    .harbor-copy h1 {
+        font-size: 70px;
+    }
+    .chart-card {
+        display: none;
+    }
+    .setup {
+        max-width: none;
+    }
+    .harbor-footer {
+        flex-wrap: wrap;
+        padding: 24px 0;
+        gap: 20px;
+    }
+    .harbor-footer > div {
+        flex: 1;
+        min-width: 125px;
+    }
+    .race-header {
+        height: 65px;
+        left: 14px;
+        right: 14px;
+        gap: 6px;
+    }
+    .race-header .wordmark {
+        font-size: 18px;
+        gap: 6px;
+    }
+    .race-header .wordmark svg {
+        width: 25px;
+        height: 25px;
+    }
+    .quiet {
+        font-size: 10px;
+        padding: 8px 6px;
+    }
+    .race-header button[data-action='pace'] {
+        display: none;
+    }
+    .fleet-strip {
+        top: 76px;
+        left: 14px;
+        right: 14px;
+        height: 56px;
+        gap: 3px;
+    }
+    .fleet-ship {
+        padding: 4px;
+        justify-content: center;
+    }
+    .fleet-ship .ship-icon {
+        display: none;
+    }
+    .fleet-ship strong {
+        font-size: 10px;
+    }
+    .fleet-ship div > span {
+        font-size: 8px;
+    }
+    .fleet-ship i {
+        display: none;
+    }
+    #game-container {
+        top: 143px;
+        bottom: 365px;
+        left: 12px;
+        right: 12px;
+    }
+    .course-label {
+        top: 158px;
+        left: 24px;
+    }
+    .course-label > span + span {
+        display: none;
+    }
+    .course-legend {
+        bottom: 377px;
+        font-size: 8px;
+        right: 23px;
+    }
+    .command-deck {
+        bottom: 44px;
+        height: 306px;
+        left: 18px;
+        right: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 13px;
+    }
+    .captain-status {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0 15px;
+        border: 0;
+        border-bottom: 1px solid var(--line);
+        padding: 0 0 12px;
+    }
+    .captain-heading {
+        height: 37px;
+    }
+    .captain-heading .ship-icon {
+        display: none;
+    }
+    .captain-heading h2 {
+        font-size: 23px;
+    }
+    .captain-heading .eyebrow {
+        font-size: 7px;
+    }
+    .hull-meter {
+        margin: 6px 0;
+    }
+    .ship-stats {
+        display: none;
+    }
+    .crew-line {
+        grid-column: 1/-1;
+        margin-top: 8px;
+    }
+    .command-main {
+        padding: 0;
+    }
+    .command-heading {
+        min-height: 43px;
+    }
+    .command-heading h2 {
+        font-size: 28px;
+    }
+    .speed-readout {
+        font-size: 38px;
+    }
+    .command-detail {
+        font-size: 11px;
+        min-height: 32px;
+    }
+    .command-actions {
+        margin-top: 8px;
+        gap: 8px;
+    }
+    .command-actions > .primary {
+        min-width: 115px;
+        font-size: 11px;
+        gap: 10px;
+    }
+    .speed-picker button {
+        min-width: 18px;
+        font-size: 13px;
+        height: 44px;
+    }
+    .speed-picker {
+        gap: 2px;
+    }
+    .keyboard-hint {
+        font-size: 9px;
+        margin-top: 10px;
+    }
+    .move-choices {
+        gap: 4px;
+    }
+    .move-choices button {
+        padding: 7px;
+    }
+    .move-choices strong {
+        font-size: 10px;
+    }
+    .move-choices small {
+        font-size: 8px;
+    }
+    .race-footer {
+        left: 18px;
+        right: 18px;
+        gap: 15px;
+    }
+    .risk-note {
+        font-size: 9px;
+    }
+    .game-dialog {
+        padding: 28px;
+    }
+    .game-dialog h2 {
+        font-size: 36px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+.decision-buttons .is-chosen {
+    outline: 1px solid var(--gold);
+    outline-offset: 3px;
+}
+
+.lap-picker { display: flex; align-items: center; justify-content: space-between; margin: 16px 0; color: var(--muted); font-size: 12px; }
+.lap-picker select { background: var(--ink); border: 1px solid var(--line); color: var(--cream); padding: 10px; border-radius: 3px; font: inherit; }
+.boarding-choices { display: flex; gap: 6px; overflow-x: auto; flex: 1; min-width: 150px; pointer-events: auto; }
+.boarding-choices button { min-width: 120px; padding: 9px 12px; text-align: left; border-radius: 3px; }
+.boarding-choices strong { display: block; text-transform: capitalize; font-size: 12px; }
+.boarding-choices small { display: block; margin-top: 4px; color: var(--muted); font-size: 9px; white-space: nowrap; }
+.boarding-choices button[aria-pressed=true] { color: var(--gold); border-color: var(--gold); background: #e4be7712; }
+
+.captain-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; margin: 16px 0; }
+.captain-picker label { display: flex; align-items: center; justify-content: space-between; gap: 8px; text-transform: capitalize; font-size: 12px; }
+.captain-picker select { min-width: 0; padding: 7px; color: #eee8d4; background: #17383d; border: 1px solid #49606a; border-radius: 4px; }
+@media (max-width: 480px) { .captain-picker { grid-template-columns: 1fr; } }

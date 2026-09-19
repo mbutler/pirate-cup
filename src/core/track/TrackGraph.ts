@@ -40,31 +40,36 @@ export class TrackGraph {
     private readonly raceProgress = new Map<TrackNodeId, number>();
 
     constructor(rawNodes: TrackNodeRaw[] = trackData as TrackNodeRaw[]) {
-        this.nodes = new Map(rawNodes.map((raw) => [raw.name, normalizeNode(raw)]));
+        this.nodes = new Map(
+            rawNodes.map((raw) => [raw.name, normalizeNode(raw)]),
+        );
         this.raceProgress = TrackGraph.buildRaceProgress(this);
     }
 
-    private static buildRaceProgress(track: TrackGraph): Map<TrackNodeId, number> {
+    /** Project onto the course oval, rather than shortest paths through its shortcut. */
+    private static buildRaceProgress(
+        track: TrackGraph,
+    ): Map<TrackNodeId, number> {
         const progress = new Map<TrackNodeId, number>();
-        const start: TrackNodeId = 'a1';
-        const queue: TrackNodeId[] = [start];
-
-        progress.set(start, 0);
-
-        while (queue.length > 0) {
-            const id = queue.shift()!;
-            const distance = progress.get(id) ?? 0;
-
-            for (const direction of ['forward', 'laneIn', 'laneOut'] as const) {
-                const neighbor = track.neighbor(id, direction);
-
-                if (!track.isWall(neighbor) && !progress.has(neighbor)) {
-                    progress.set(neighbor, distance + 1);
-                    queue.push(neighbor);
-                }
+        for (const node of track.nodes.values()) {
+            let distance: number;
+            if (node.x < 260) {
+                distance =
+                    1240 +
+                    ((Math.atan2(node.y - 540, 260 - node.x) + Math.PI / 2) /
+                        Math.PI) *
+                        400;
+            } else if (node.x > 1660) {
+                distance =
+                    3040 +
+                    ((Math.PI / 2 - Math.atan2(node.y - 540, node.x - 1660)) /
+                        Math.PI) *
+                        400;
+            } else {
+                distance = node.y < 540 ? 1500 - node.x : 1640 + node.x - 260;
             }
+            progress.set(node.id, (((distance % 3600) + 3600) % 3600) / 3600);
         }
-
         return progress;
     }
 

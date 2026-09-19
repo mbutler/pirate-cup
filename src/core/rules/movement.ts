@@ -1,6 +1,6 @@
 import type { MoveDirection } from '../track/types';
 import { defaultTrack, type TrackGraph } from '../track/TrackGraph';
-import type { ShipState } from '../entities/types';
+import { moveShip } from './race';
 import type { GameState } from '../state/GameState';
 import type { GameEvent } from '../events/types';
 import type { Rng } from '../rng/Rng';
@@ -17,7 +17,10 @@ export function getOccupyingShipId(
     excludeId?: string,
 ): string | undefined {
     return Object.values(state.ships).find(
-        (ship) => !ship.destroyed && ship.id !== excludeId && ship.positionId === positionId,
+        (ship) =>
+            !ship.destroyed &&
+            ship.id !== excludeId &&
+            ship.positionId === positionId,
     )?.id;
 }
 
@@ -27,6 +30,7 @@ export function applyMove(
     direction: MoveDirection,
     track: TrackGraph = defaultTrack,
     rng?: Rng,
+    forced = false,
 ): MoveResolution {
     const ship = state.ships[playerId];
 
@@ -44,25 +48,33 @@ export function applyMove(
     const rammedId = getOccupyingShipId(state, targetId, playerId);
 
     if (rammedId && rng) {
-        return resolveRammingChain(state, playerId, rammedId, from, targetId, rng, track);
+        return resolveRammingChain(
+            state,
+            playerId,
+            rammedId,
+            from,
+            targetId,
+            rng,
+            track,
+            forced,
+        );
     }
 
-    const updatedShip: ShipState = {
-        ...ship,
-        positionId: targetId,
-        movementRemaining: Math.max(0, ship.movementRemaining - 1),
-        corneringChecksRemaining: track.corneringChecksOwed(ship.chosenSpeed, targetId),
+    const events: GameEvent[] = [];
+    const moved = moveShip(state, playerId, targetId, events, track);
+    const updatedShip = {
+        ...moved.ships[playerId],
+        movementRemaining: forced
+            ? ship.movementRemaining
+            : Math.max(0, ship.movementRemaining - 1),
+        // A forced drift resolves an existing check; it must not create new checks recursively.
+        corneringChecksRemaining: forced
+            ? ship.corneringChecksRemaining
+            : track.corneringChecksOwed(ship.chosenSpeed, targetId),
     };
-
     return {
-        state: {
-            ...state,
-            ships: {
-                ...state.ships,
-                [playerId]: updatedShip,
-            },
-        },
-        events: [{ type: 'SHIP_MOVED', playerId, from, to: targetId }],
+        state: { ...moved, ships: { ...moved.ships, [playerId]: updatedShip } },
+        events,
     };
 }
 
@@ -86,13 +98,18 @@ export function prepareShipForMovement(
                 ...ship,
                 chosenSpeed: input.speed,
                 movementRemaining: input.speed,
+                corneringChecksRemaining: 0,
+                driftRemaining: 0,
+                bonusMovement: 0,
                 flogAttemptsRemaining: state.config.flogAttemptsPerTurn,
             },
         },
     };
 }
 
-export function driftDirectionFromOutcome(outcome: string): MoveDirection | null {
+export function driftDirectionFromOutcome(
+    outcome: string,
+): MoveDirection | null {
     if (outcome === 'drift1' || outcome === 'drift2' || outcome === 'drift3') {
         return 'laneOut';
     }

@@ -24,7 +24,7 @@ export function applyHullDamage(
 
     const overflow = amount - absorbed;
     hull.structure = Math.max(0, hull.structure - overflow);
-    const destroyed = hull.structure <= 0;
+    const destroyed = ship.destroyed || hull.structure <= 0;
 
     return {
         ship: {
@@ -47,6 +47,7 @@ export function applyMastDamage(ship: ShipState, amount: number): ShipState {
         ...ship,
         rowers,
         maxSpeed: maxSpeedFromRowers(rowers),
+        destroyed: ship.destroyed || rowers.hp === 0,
     };
 }
 

@@ -16,12 +16,12 @@ export interface GameConfig {
 }
 
 export const DEFAULT_STARTING_POSITIONS: TrackNodeId[] = [
-    'a1',
-    'b1',
-    'c2',
-    'c3',
-    'b3',
-    'a21',
+    'a30',
+    'b36',
+    'c40',
+    'd44',
+    'a29',
+    'c39',
 ];
 
 export const DEFAULT_SHIP_COLORS: ShipColor[] = [
@@ -33,7 +33,9 @@ export const DEFAULT_SHIP_COLORS: ShipColor[] = [
     'black',
 ];
 
-export function createGameConfig(overrides: Partial<GameConfig> = {}): GameConfig {
+export function createGameConfig(
+    overrides: Partial<GameConfig> = {},
+): GameConfig {
     const playerCount = overrides.playerCount ?? 6;
 
     return {
@@ -41,7 +43,9 @@ export function createGameConfig(overrides: Partial<GameConfig> = {}): GameConfi
         lapsToWin: overrides.lapsToWin ?? 3,
         flogAttemptsPerTurn: overrides.flogAttemptsPerTurn ?? 6,
         startingPositions:
-            overrides.startingPositions ?? DEFAULT_STARTING_POSITIONS.slice(0, playerCount),
-        shipColors: overrides.shipColors ?? DEFAULT_SHIP_COLORS.slice(0, playerCount),
+            overrides.startingPositions ??
+            DEFAULT_STARTING_POSITIONS.slice(0, playerCount),
+        shipColors:
+            overrides.shipColors ?? DEFAULT_SHIP_COLORS.slice(0, playerCount),
     };
 }

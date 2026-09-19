@@ -1,4 +1,4 @@
-import type { TrackNode } from '../core/track/types';
+import type { TrackNode } from '../../core/track/types';
 
 /**
  * Layout constants from the original POC.

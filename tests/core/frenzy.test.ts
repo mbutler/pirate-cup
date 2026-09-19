@@ -14,7 +14,9 @@ import { defaultTrack } from '../../src/core/track/TrackGraph';
 
 describe('frenzy (mutiny)', () => {
     it('tracks race progress from the start line', () => {
-        expect(defaultTrack.raceProgressFromStart('a1')).toBe(0);
+        expect(defaultTrack.raceProgressFromStart('a1')).toBeLessThan(0.05);
+        expect(defaultTrack.raceProgressFromStart('b1')).toBeLessThan(0.05);
+        expect(defaultTrack.raceProgressFromStart('a30')).toBeGreaterThan(0.95);
         expect(defaultTrack.raceProgressFromStart('a10')).toBeGreaterThan(
             defaultTrack.raceProgressFromStart('a1'),
         );
@@ -40,7 +42,11 @@ describe('frenzy (mutiny)', () => {
         const config = createGameConfig({ playerCount: 2 });
         const base = createShipState('player-1', 'red', 'a1', config);
         let state = createInitialState('critical', { playerCount: 2 });
-        const events: Array<{ type: 'MUTINY_STARTED'; playerId: string; reason?: 'critical_damage' }> = [];
+        const events: Array<{
+            type: 'MUTINY_STARTED';
+            playerId: string;
+            reason?: 'critical_damage';
+        }> = [];
 
         state = integratePostDamage(
             {
@@ -55,7 +61,9 @@ describe('frenzy (mutiny)', () => {
             events,
         );
 
-        expect(events.some((event) => event.type === 'MUTINY_STARTED')).toBe(true);
+        expect(events.some((event) => event.type === 'MUTINY_STARTED')).toBe(
+            true,
+        );
         expect(isInFrenzy(state.ships['player-1'])).toBe(true);
         expect(state.ships['player-1'].turnDamageTaken).toBe(16);
     });
@@ -74,7 +82,9 @@ describe('frenzy (mutiny)', () => {
                     lapsCompleted: 1,
                 },
                 'player-2': {
-                    ...markFrenzy(createShipState('player-2', 'blue', 'a3', config)),
+                    ...markFrenzy(
+                        createShipState('player-2', 'blue', 'a3', config),
+                    ),
                     lapsCompleted: 0,
                 },
             },
@@ -82,8 +92,14 @@ describe('frenzy (mutiny)', () => {
 
         const result = resolveCleanupPhase(state, rng);
 
-        expect(result.events.some((event) => event.type === 'FRENZY_COOLDOWN_ROLL')).toBe(true);
-        expect(result.events.some((event) => event.type === 'ARENA_LASER')).toBe(true);
+        expect(
+            result.events.some(
+                (event) => event.type === 'FRENZY_COOLDOWN_ROLL',
+            ),
+        ).toBe(true);
+        expect(
+            result.events.some((event) => event.type === 'ARENA_LASER'),
+        ).toBe(true);
         expect(isInFrenzy(result.state.ships['player-2'])).toBe(true);
     });
 
@@ -103,10 +119,16 @@ describe('frenzy (mutiny)', () => {
 
         const result = resolveCleanupPhase(state, rng);
 
-        expect(result.events.some((event) => event.type === 'ARENA_LASER')).toBe(true);
-        expect(result.events.some(
-            (event) => event.type === 'MUTINY_STARTED' && event.playerId === 'player-2',
-        )).toBe(true);
+        expect(
+            result.events.some((event) => event.type === 'ARENA_LASER'),
+        ).toBe(true);
+        expect(
+            result.events.some(
+                (event) =>
+                    event.type === 'MUTINY_STARTED' &&
+                    event.playerId === 'player-2',
+            ),
+        ).toBe(true);
         expect(isInFrenzy(result.state.ships['player-2'])).toBe(true);
     });
 
@@ -114,11 +136,30 @@ describe('frenzy (mutiny)', () => {
         const rng = createRng('end-turn-cleanup');
         let state = createInitialState('end-turn-cleanup', { playerCount: 2 });
         state = { ...state, phase: 'combat' };
+        state = reduce(
+            state,
+            { type: 'PASS_ATTACK', attackerId: 'player-1' },
+            rng,
+        ).state;
+        state = reduce(
+            state,
+            { type: 'PASS_ATTACK', attackerId: 'player-2' },
+            rng,
+        ).state;
 
         const result = reduce(state, { type: 'END_TURN' }, rng);
 
-        expect(result.events.some((event) => event.type === 'FRENZY_COOLDOWN_ROLL')).toBe(false);
-        expect(result.events.some((event) => event.type === 'PHASE_CHANGED' && event.to === 'input')).toBe(true);
+        expect(
+            result.events.some(
+                (event) => event.type === 'FRENZY_COOLDOWN_ROLL',
+            ),
+        ).toBe(false);
+        expect(
+            result.events.some(
+                (event) =>
+                    event.type === 'PHASE_CHANGED' && event.to === 'input',
+            ),
+        ).toBe(true);
         expect(result.state.turn).toBe(2);
     });
 });

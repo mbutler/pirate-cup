@@ -24,9 +24,13 @@ export interface RowersState {
 
 export interface ShipState {
     id: string;
+    ownerId: string;
     color: ShipColor;
     positionId: string;
     lapsCompleted: number;
+    /** Next required course gate: west, south, east, finish. */
+    nextCheckpoint: number;
+    hasStarted: boolean;
     /** Max speed from rower health (hp / 10). */
     maxSpeed: number;
     /** Speed chosen for the current turn. */
@@ -43,7 +47,7 @@ export interface ShipState {
     flogAttemptsRemaining: number;
     /** Hull + rower damage taken this turn (for critical frenzy trigger). */
     turnDamageTaken: number;
-    /** Whether the ship is destroyed (wreck on track). */
+    /** Whether hull or rowers are lost; the disabled vessel is out of the race. */
     destroyed: boolean;
     hull: HullState;
     crew: CrewState;
@@ -88,6 +92,17 @@ export function maxSpeedFromRowers(rowers: RowersState): number {
     return sailsFromMastHp(rowers.hp);
 }
 
-export function hitSideToHullKey(side: HitSide): keyof Pick<HullState, 'front' | 'rear' | 'left' | 'right'> {
+export function hitSideToHullKey(
+    side: HitSide,
+): keyof Pick<HullState, 'front' | 'rear' | 'left' | 'right'> {
     return side;
+}
+
+/** A captain's surviving party, separate from the physical vessel. */
+export interface DisplacedCrew extends CrewState {
+    id: string;
+    color: ShipColor;
+    positionId: string;
+    lapsCompleted: number;
+    actedTurn: number;
 }

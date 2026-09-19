@@ -35,6 +35,8 @@ function shortDirectionLabel(direction: MoveDirection): string {
             return 'AHEAD';
         case 'laneOut':
             return 'STBD';
+        default:
+            return direction;
     }
 }
 
@@ -68,7 +70,10 @@ function spreadAngles(angles: number[]): number[] {
     return restored;
 }
 
-function slotFromAngle(from: { x: number; y: number }, angle: number): LabelSlot {
+function slotFromAngle(
+    from: { x: number; y: number },
+    angle: number,
+): LabelSlot {
     return {
         x: from.x + Math.cos(angle) * LABEL_RADIUS,
         y: from.y + Math.sin(angle) * LABEL_RADIUS,
@@ -79,7 +84,10 @@ export class MovePreview {
     private layer?: Phaser.GameObjects.Container;
     private pulseTween?: Phaser.Tweens.Tween;
 
-    constructor(private readonly scene: Phaser.Scene) {}
+    constructor(
+        private readonly scene: Phaser.Scene,
+        private readonly onMove: (index: number) => void,
+    ) {}
 
     show(
         fromId: TrackNodeId,
@@ -90,18 +98,27 @@ export class MovePreview {
 
         this.layer = this.scene.add.container(0, 0).setDepth(12);
 
+        const layer = this.layer;
         const from = trackNodeToWorld(defaultTrack.getNode(fromId));
         const angles = options.map((option) => {
             const to = trackNodeToWorld(defaultTrack.getNode(option.nodeId));
             return PhaserMath.Angle.Between(from.x, from.y, to.x, to.y);
         });
-        const slots = spreadAngles(angles).map((angle) => slotFromAngle(from, angle));
+        const slots = spreadAngles(angles).map((angle) => {
+            const slot = slotFromAngle(from, angle);
+            return {
+                x: Math.max(65, Math.min(1855, slot.x)),
+                y: Math.max(245, Math.min(845, slot.y)),
+            };
+        });
 
         options.forEach((option, index) => {
             const to = trackNodeToWorld(defaultTrack.getNode(option.nodeId));
             const selected = index === selectedIndex;
             const color = option.hasShip
-                ? (selected ? COLORS.ram : 0xd97706)
+                ? selected
+                    ? COLORS.ram
+                    : 0xd97706
                 : selected
                   ? COLORS.selected
                   : COLORS.option;
@@ -109,20 +126,32 @@ export class MovePreview {
             const moveAngle = angles[index];
             const slot = slots[index];
 
-            const ring = this.scene.add.circle(to.x, to.y, ringRadius, color, selected ? 0.28 : 0.1);
+            const ring = this.scene.add.circle(
+                to.x,
+                to.y,
+                ringRadius,
+                color,
+                selected ? 0.28 : 0.1,
+            );
             ring.setStrokeStyle(selected ? 4 : 2, color, selected ? 1 : 0.65);
-            this.layer.add(ring);
+            ring.setInteractive({ useHandCursor: true });
+            ring.on('pointerdown', () => this.onMove(index));
+            layer.add(ring);
 
             const ringEdgeX = to.x - Math.cos(moveAngle) * ringRadius;
             const ringEdgeY = to.y - Math.sin(moveAngle) * ringRadius;
 
             const leader = this.scene.add.graphics();
-            leader.lineStyle(selected ? 2 : 1, COLORS.leader, selected ? 0.55 : 0.28);
+            leader.lineStyle(
+                selected ? 2 : 1,
+                COLORS.leader,
+                selected ? 0.55 : 0.28,
+            );
             leader.beginPath();
             leader.moveTo(slot.x, slot.y);
             leader.lineTo(ringEdgeX, ringEdgeY);
             leader.strokePath();
-            this.layer.add(leader);
+            layer.add(leader);
 
             if (selected) {
                 this.pulseTween = this.scene.tweens.add({
@@ -140,7 +169,7 @@ export class MovePreview {
                 arrow.moveTo(from.x, from.y);
                 arrow.lineTo(ringEdgeX, ringEdgeY);
                 arrow.strokePath();
-                this.layer.add(arrow);
+                layer.add(arrow);
             }
 
             const text = selected
@@ -157,23 +186,28 @@ export class MovePreview {
                     0.75,
                 );
                 pad.setStrokeStyle(1, color, 0.95);
-                this.layer.add(pad);
+                layer.add(pad);
             }
 
-            const label = this.scene.add.text(slot.x, slot.y, text, {
-                fontFamily: 'Arial, sans-serif',
-                fontSize: selected ? '15px' : '13px',
-                fontStyle: selected ? 'bold' : 'normal',
-                color: option.hasShip
-                    ? (selected ? '#fde68a' : '#fbbf24')
-                    : selected
-                      ? '#bbf7d0'
-                      : '#cbd5e1',
-                stroke: '#000000',
-                strokeThickness: selected ? 3 : 2,
-                align: 'center',
-            }).setOrigin(0.5).setAlpha(selected ? 1 : 0.78);
-            this.layer.add(label);
+            const label = this.scene.add
+                .text(slot.x, slot.y, text, {
+                    fontFamily: 'Arial, sans-serif',
+                    fontSize: selected ? '15px' : '13px',
+                    fontStyle: selected ? 'bold' : 'normal',
+                    color: option.hasShip
+                        ? selected
+                            ? '#fde68a'
+                            : '#fbbf24'
+                        : selected
+                          ? '#bbf7d0'
+                          : '#cbd5e1',
+                    stroke: '#000000',
+                    strokeThickness: selected ? 3 : 2,
+                    align: 'center',
+                })
+                .setOrigin(0.5)
+                .setAlpha(selected ? 1 : 0.78);
+            layer.add(label);
         });
     }
 

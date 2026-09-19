@@ -1,7 +1,7 @@
 /** Phaser display configuration — matches the original 1920×1080 track art. */
 export const DISPLAY = {
     width: 1920,
-    height: 1080,
+    height: 720,
     backgroundColor: '#0b3d5c',
 } as const;
 

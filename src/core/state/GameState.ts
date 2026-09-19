@@ -9,14 +9,13 @@ import {
     DEFAULT_ROWERS,
     maxSpeedFromRowers,
     type ShipState,
+    type DisplacedCrew,
 } from '../entities/types';
 
+import type { FinishReason } from '../rules/race';
+
 export type TurnPhase =
-    | 'input'
-    | 'movement'
-    | 'combat'
-    | 'cleanup'
-    | 'finished';
+    'crew' | 'input' | 'movement' | 'combat' | 'cleanup' | 'finished';
 
 export interface TurnInput {
     speed: number;
@@ -28,7 +27,7 @@ export interface TurnInput {
 
 export interface PendingCombat {
     attackerId: string;
-    targetId: string;
+    targetId: string | null;
 }
 
 export interface GameState {
@@ -36,18 +35,21 @@ export interface GameState {
     seed: string;
     turn: number;
     phase: TurnPhase;
-    /** Player id whose client UI is active in hot-seat mode. */
+    /** Physical vessel id whose client UI is active; captain identity is ship.ownerId. */
     activePlayerId: string | null;
     /** Movement resolution order for the current turn (highest speed first). */
     movementOrder: string[];
     /** Index into movementOrder during movement phase. */
     movementIndex: number;
     ships: Record<string, ShipState>;
+    displacedCrew: Record<string, DisplacedCrew>;
+    activeCrewId: string | null;
     /** Secret inputs keyed by player/ship id. */
     inputs: Record<string, TurnInput | undefined>;
     /** Combat declarations queued for simultaneous resolution. */
     pendingCombat: PendingCombat[];
     winnerId: string | null;
+    finishReason: FinishReason | null;
 }
 
 export function createShipState(
@@ -60,9 +62,12 @@ export function createShipState(
 
     return {
         id,
+        ownerId: id,
         color,
         positionId,
         lapsCompleted: 0,
+        nextCheckpoint: 0,
+        hasStarted: false,
         maxSpeed: maxSpeedFromRowers(rowers),
         chosenSpeed: 0,
         movementRemaining: 0,
@@ -106,14 +111,19 @@ export function createInitialState(
         movementOrder: [],
         movementIndex: 0,
         ships,
+        displacedCrew: {},
+        activeCrewId: null,
         inputs: {},
         pendingCombat: [],
         winnerId: null,
+        finishReason: null,
     };
 }
 
 export function allInputsSubmitted(state: GameState): boolean {
-    const activeShips = Object.values(state.ships).filter((ship) => !ship.destroyed);
+    const activeShips = Object.values(state.ships).filter(
+        (ship) => !ship.destroyed,
+    );
 
     return activeShips.every((ship) => state.inputs[ship.id] !== undefined);
 }
