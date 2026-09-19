@@ -96,8 +96,12 @@ export function resolveCrewAction(
         },
     };
     const events: GameEvent[] = [];
-    const say = (message: string) =>
-        events.push({ type: 'CREW_MESSAGE', message });
+    const say = (message: string, capturedShipId?: string) =>
+        events.push({
+            type: 'CREW_MESSAGE',
+            message,
+            ...(capturedShipId ? { capturedShipId } : {}),
+        });
     if (action.type === 'CREW_MOVE') {
         if (!crewDestinations(state, crew.id).includes(action.destinationId))
             return { state, events: [] };
@@ -145,6 +149,7 @@ export function resolveCrewAction(
             };
             say(
                 `${crew.color} hijacks ${target.color}'s ship (${attack} vs ${defense})! ${target.color}'s crew is displaced. Earned laps stay with each captain; the current lap restarts.`,
+                target.id,
             );
         } else {
             const captainHp = Math.max(0, crew.captainHp - 4);

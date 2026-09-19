@@ -40,7 +40,9 @@ export class Preloader extends Scene {
             this.load.image(`dinghySmall${index}`, path);
         });
 
-        this.load.audio(ASSETS.audio.uiBeepKey, ASSETS.audio.uiBeepPath);
+        Object.values(ASSETS.audio).forEach((key) => {
+            this.load.audio(key, `assets/audio/${key}.wav`);
+        });
     }
 
     create() {

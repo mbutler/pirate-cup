@@ -63,8 +63,11 @@ export const ASSETS = {
         ],
     },
     audio: {
-        uiBeepKey: 'sfxUiBeep',
-        uiBeepPath: 'assets/audio/sfx-ui-beep.mp3',
+        hullImpact: 'hull-impact',
+        boardingClash: 'boarding-clash',
+        shipWreck: 'ship-wreck',
+        shipBell: 'ship-bell',
+        mutinyBell: 'mutiny-bell',
     },
 } as const;
 

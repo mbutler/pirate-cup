@@ -98,7 +98,7 @@ export function formatShipSummary(ship: ShipState): string {
     return parts.join('  ·  ');
 }
 
-function formatHitSide(side: string): string {
+export function formatHitSide(side: string): string {
     switch (side) {
         case 'left':
             return 'port';

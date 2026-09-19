@@ -217,11 +217,70 @@ export class RaceBoard {
         });
     }
 
+    /** Connect the acting vessel to its target while its result is explained. */
+    highlightExchange(attackerId: string, targetId: string): () => void {
+        const attacker = this.shipSprites.get(attackerId);
+        const target = this.shipSprites.get(targetId);
+        if (!attacker || !target) return () => {};
+        const ink = this.scene.add.graphics().setDepth(30);
+        ink.lineStyle(3, 0xe4be77, 0.95);
+        ink.strokeCircle(attacker.x, attacker.y, 34);
+        ink.lineBetween(attacker.x, attacker.y, target.x, target.y);
+        ink.lineStyle(4, 0xff8f74, 1);
+        ink.strokeCircle(target.x, target.y, 37);
+        const angle = Math.atan2(target.y - attacker.y, target.x - attacker.x);
+        const tipX = target.x - Math.cos(angle) * 38;
+        const tipY = target.y - Math.sin(angle) * 38;
+        ink.fillStyle(0xff8f74, 1);
+        ink.fillTriangle(
+            tipX,
+            tipY,
+            tipX - Math.cos(angle - 0.5) * 18,
+            tipY - Math.sin(angle - 0.5) * 18,
+            tipX - Math.cos(angle + 0.5) * 18,
+            tipY - Math.sin(angle + 0.5) * 18,
+        );
+        return () => ink.destroy();
+    }
+
+    async showDamage(
+        shipId: string,
+        message: string,
+        below = false,
+    ): Promise<void> {
+        const sprite = this.shipSprites.get(shipId);
+        if (!sprite) return;
+        const label = this.scene.add
+            .text(
+                Math.max(100, Math.min(1820, sprite.x)),
+                Math.min(840, Math.max(240, sprite.y + (below ? 55 : -55))),
+                message,
+                {
+                    fontFamily: 'Arial, sans-serif',
+                    fontSize: '19px',
+                    fontStyle: 'bold',
+                    color: '#ffd4bc',
+                    backgroundColor: '#34262a',
+                    padding: { x: 8, y: 5 },
+                    align: 'center',
+                },
+            )
+            .setOrigin(0.5)
+            .setDepth(510);
+        await new Promise<void>((resolve) => {
+            this.scene.time.delayedCall(this.quick ? 650 : 1100, () => {
+                label.destroy();
+                resolve();
+            });
+        });
+    }
+
     async showCardToast(
         shipId: string,
         kind: string,
         message: string,
         accent = '#f2ca02',
+        major = false,
     ): Promise<void> {
         const sprite = this.shipSprites.get(shipId);
         const x = Math.max(165, Math.min(1755, sprite?.x ?? 960));
@@ -249,6 +308,10 @@ export class RaceBoard {
             })
             .setOrigin(0.5);
 
+        const height = Math.max(88, messageText.height + 54);
+        bg.setSize(300, height);
+        kindText.setY(-height / 2 + 18);
+        messageText.setY(10);
         container.add([bg, kindText, messageText]);
         container.setAlpha(0);
         container.setScale(0.88);
@@ -265,8 +328,9 @@ export class RaceBoard {
         });
 
         await new Promise<void>((resolve) => {
-            this.scene.time.delayedCall(this.quick ? 220 : 550, () =>
-                resolve(),
+            this.scene.time.delayedCall(
+                major ? (this.quick ? 1100 : 1800) : this.quick ? 500 : 900,
+                () => resolve(),
             );
         });
 

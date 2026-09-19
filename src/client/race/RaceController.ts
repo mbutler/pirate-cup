@@ -1,3 +1,4 @@
+import { downloadSave, writeSave } from '../RaceSave';
 import { chooseComputerAction } from '../../core/ai/Captain';
 import type { GameEvent } from '../../core/events/types';
 import { defaultTrack } from '../../core/track/TrackGraph';
@@ -16,6 +17,7 @@ import { isConfirmKey, clearKeyboardHistory } from '../input/keyboard';
 import { GameHud } from '../ui/GameHud';
 import {
     formatCorneringOutcome,
+    formatHitSide,
     formatEventMessage,
     formatFloggingOutcome,
     formatMoveDirection,
@@ -46,6 +48,7 @@ export class RaceController {
     private mode: ControllerMode = { kind: 'pick_speed', speed: 0 };
     private eventLog =
         'Welcome aboard. Pick speed, then move one hex at a time.';
+    private presentingEvent: GameEvent | null = null;
     private locked = false;
     private disposed = false;
     private computerTimer?: ReturnType<typeof setTimeout>;
@@ -101,12 +104,17 @@ export class RaceController {
     }
 
     start() {
+        const save = () =>
+            this.hud.setSaveStatus(writeSave(this.session.snapshot()));
+        this.session.setSaveHandler(save);
+        save();
         this.bindKeyboard();
         void this.resumeAfterAction();
     }
 
     destroy() {
         this.disposed = true;
+        this.session.setSaveHandler(null);
         clearTimeout(this.computerTimer);
         document.removeEventListener('keydown', this.keyHandler);
         this.hud.destroy();
@@ -118,6 +126,10 @@ export class RaceController {
     }
 
     private async handleHudAction(action: string, value?: number) {
+        if (action === 'export') {
+            downloadSave(this.session.snapshot());
+            return;
+        }
         if (action === 'sound') {
             this.scene.sound.mute = !this.scene.sound.mute;
             return;
@@ -673,108 +685,223 @@ export class RaceController {
     }
 
     private async playEvents(events: GameEvent[]) {
-        for (const event of events) {
-            if (this.disposed) return;
-            if (event.type !== 'PHASE_CHANGED') {
-                this.eventLog = formatEventMessage(event);
-                for (const racer of Object.values(this.session.state.ships)) {
-                    this.eventLog = this.eventLog
-                        .split(racer.id)
-                        .join(
-                            racer.color.charAt(0).toUpperCase() +
-                                racer.color.slice(1),
-                        );
+        try {
+            for (const event of events) {
+                if (this.disposed) return;
+                this.presentingEvent = event;
+                if (event.type !== 'PHASE_CHANGED') {
+                    this.eventLog = formatEventMessage(event);
+                    for (const racer of Object.values(
+                        this.session.state.ships,
+                    )) {
+                        this.eventLog = this.eventLog
+                            .split(racer.id)
+                            .join(
+                                racer.color.charAt(0).toUpperCase() +
+                                    racer.color.slice(1),
+                            );
+                    }
                 }
-            }
 
-            if (event.type === 'SHIP_MOVED') {
-                await this.board.tweenShipTo(event.playerId, event.to);
-            }
+                // Publish the explanation before animating its consequence.
+                this.refreshHud();
 
-            if (event.type === 'COMBAT_RESOLVED') {
-                this.board.flashDamage(event.targetId);
-                await this.board.showCardToast(
-                    event.targetId,
-                    'Boarding strike',
-                    `−${event.damage} boarder health`,
-                    '#e4be77',
-                );
-            }
+                if (event.type === 'SHIP_MOVED') {
+                    await this.board.tweenShipTo(event.playerId, event.to);
+                }
 
-            if (event.type === 'WALL_COLLISION' || event.type === 'RAMMING') {
-                this.scene.cameras.main.shake(120, 0.012);
-                this.scene.sound.play(ASSETS.audio.uiBeepKey, { volume: 0.45 });
+                if (event.type === 'COMBAT_RESOLVED') {
+                    this.scene.sound.play(ASSETS.audio.boardingClash, {
+                        volume: 0.4,
+                    });
+                    const clear = this.board.highlightExchange(
+                        event.attackerId,
+                        event.targetId,
+                    );
+                    try {
+                        await this.board.showDamage(
+                            event.targetId,
+                            `−${event.damage} boarder health`,
+                        );
+                    } finally {
+                        clear();
+                    }
+                }
 
                 if (event.type === 'WALL_COLLISION') {
                     this.board.flashDamage(event.playerId);
-                } else {
-                    this.board.flashDamage(event.rammerId);
-                    this.board.flashDamage(event.rammedId);
+                    this.scene.sound.play(ASSETS.audio.hullImpact, {
+                        volume: 0.55,
+                    });
+                    await this.board.showCardToast(
+                        event.playerId,
+                        'Reef strike',
+                        formatEventMessage(event).replace(/^Reef strike /, ''),
+                        '#ff9977',
+                    );
                 }
-            }
+                if (event.type === 'RAMMING') {
+                    const clear = this.board.highlightExchange(
+                        event.rammerId,
+                        event.rammedId,
+                    );
+                    this.scene.sound.play(ASSETS.audio.hullImpact, {
+                        volume: 0.55,
+                    });
+                    try {
+                        const losses = [];
+                        if (event.rammerHullDamage)
+                            losses.push(
+                                `−${event.rammerHullDamage} ${event.rammerHullSide ? formatHitSide(event.rammerHullSide) : 'hull'}`,
+                            );
+                        if (event.rammerMastDamage)
+                            losses.push(`−${event.rammerMastDamage} rowers`);
+                        await Promise.all([
+                            this.board.showDamage(
+                                event.rammedId,
+                                `−${event.rammedDamage} ${formatHitSide(event.rammedSide)}`,
+                                true,
+                            ),
+                            losses.length
+                                ? this.board.showDamage(
+                                      event.rammerId,
+                                      losses.join('\n'),
+                                  )
+                                : Promise.resolve(),
+                        ]);
+                    } finally {
+                        clear();
+                    }
+                }
+                if (event.type === 'SHIP_DESTROYED') {
+                    this.scene.sound.play(ASSETS.audio.shipWreck, {
+                        volume: 0.55,
+                    });
+                    await this.board.showCardToast(
+                        event.playerId,
+                        'Ship lost',
+                        'Vessel out of the race.',
+                        '#ff9977',
+                        true,
+                    );
+                }
+                if (event.type === 'CREW_MESSAGE' && event.capturedShipId) {
+                    this.scene.sound.play(ASSETS.audio.shipBell, {
+                        volume: 0.35,
+                    });
+                    this.board.syncShips(
+                        this.session.state.ships,
+                        this.session.state.activePlayerId,
+                    );
+                    const color =
+                        this.session.state.ships[event.capturedShipId].color;
+                    await this.board.showCardToast(
+                        event.capturedShipId,
+                        'Hijacked!',
+                        `${color.toUpperCase()} takes the helm. Defenders escape.`,
+                        '#e4be77',
+                        true,
+                    );
+                }
+                if (event.type === 'BOARDER_DEFEATED') {
+                    await this.board.showCardToast(
+                        event.playerId,
+                        'Boarder defeated',
+                        'This ship can still race.',
+                        '#ff9977',
+                        true,
+                    );
+                }
+                if (event.type === 'LAP_COMPLETED') {
+                    this.scene.sound.play(ASSETS.audio.shipBell, {
+                        volume: 0.35,
+                    });
+                    await this.board.showCardToast(
+                        event.playerId,
+                        'Lap complete',
+                        `Lap ${event.lap} of ${this.session.state.config.lapsToWin}`,
+                        '#a7d9ca',
+                    );
+                }
+                if (event.type === 'RACE_WON' || event.type === 'RACE_DRAWN') {
+                    await this.board.showCardToast(
+                        event.type === 'RACE_WON' ? event.playerId : '',
+                        'Race finished',
+                        event.type === 'RACE_WON'
+                            ? `${this.session.state.ships[event.playerId].color.toUpperCase()} wins the cup!`
+                            : 'No vessels remain in the race.',
+                        '#e4be77',
+                        true,
+                    );
+                }
 
-            if (event.type === 'CORNERING_DRAWN') {
-                await this.board.showCardToast(
-                    event.playerId,
-                    'Cornering',
-                    formatCorneringOutcome(event.outcome),
-                    '#8ecae6',
-                );
-            }
+                if (event.type === 'CORNERING_DRAWN') {
+                    await this.board.showCardToast(
+                        event.playerId,
+                        'Cornering',
+                        formatCorneringOutcome(event.outcome),
+                        '#8ecae6',
+                    );
+                }
 
-            if (event.type === 'FLOGGING_DRAWN') {
-                await this.board.showCardToast(
-                    event.playerId,
-                    'Flogging',
-                    formatFloggingOutcome(event.outcome),
-                    '#f2ca02',
-                );
-            }
+                if (event.type === 'FLOGGING_DRAWN') {
+                    await this.board.showCardToast(
+                        event.playerId,
+                        'Flogging',
+                        formatFloggingOutcome(event.outcome),
+                        '#f2ca02',
+                    );
+                }
 
-            if (event.type === 'MUTINY_STARTED') {
-                this.scene.cameras.main.shake(200, 0.018);
-                this.scene.sound.play(ASSETS.audio.uiBeepKey, { volume: 0.55 });
-                await this.board.showCardToast(
-                    event.playerId,
-                    'Mutiny',
-                    'Rowers seize the ship!',
-                    '#ff5555',
-                );
-            }
+                if (event.type === 'MUTINY_STARTED') {
+                    this.scene.cameras.main.shake(200, 0.018);
+                    this.scene.sound.play(ASSETS.audio.mutinyBell, {
+                        volume: 0.4,
+                    });
+                    await this.board.showCardToast(
+                        event.playerId,
+                        'Mutiny',
+                        'Rowers seize the ship!',
+                        '#ff5555',
+                    );
+                }
 
-            if (event.type === 'MUTINY_SPEED_ROLLED') {
-                await this.board.showCardToast(
-                    event.playerId,
-                    'Mutiny',
-                    `Speed ${event.speed} — max speed + d10 (${event.roll})`,
-                    '#ff8844',
-                );
-            }
+                if (event.type === 'MUTINY_SPEED_ROLLED') {
+                    await this.board.showCardToast(
+                        event.playerId,
+                        'Mutiny',
+                        `Speed ${event.speed} — max speed + d10 (${event.roll})`,
+                        '#ff8844',
+                    );
+                }
 
-            if (event.type === 'MUTINY_ENDED') {
-                await this.board.showCardToast(
-                    event.playerId,
-                    'Mutiny over',
-                    formatEventMessage(event),
-                    '#8ecae6',
-                );
-            }
+                if (event.type === 'MUTINY_ENDED') {
+                    await this.board.showCardToast(
+                        event.playerId,
+                        'Mutiny over',
+                        formatEventMessage(event),
+                        '#8ecae6',
+                    );
+                }
 
-            if (
-                event.type === 'ARENA_LASER' ||
-                event.type === 'FRENZY_COOLDOWN_ROLL'
-            ) {
-                await this.board.showCardToast(
-                    event.playerId,
-                    event.type === 'ARENA_LASER'
-                        ? 'Warning shot'
-                        : 'Crew recovery',
-                    formatEventMessage(event),
-                    event.type === 'ARENA_LASER' ? '#ff4444' : '#8ecae6',
-                );
-            }
+                if (
+                    event.type === 'ARENA_LASER' ||
+                    event.type === 'FRENZY_COOLDOWN_ROLL'
+                ) {
+                    await this.board.showCardToast(
+                        event.playerId,
+                        event.type === 'ARENA_LASER'
+                            ? 'Warning shot'
+                            : 'Crew recovery',
+                        formatEventMessage(event),
+                        event.type === 'ARENA_LASER' ? '#ff4444' : '#8ecae6',
+                    );
+                }
 
-            this.refreshHud();
+                this.refreshHud();
+            }
+        } finally {
+            this.presentingEvent = null;
         }
     }
 
@@ -848,7 +975,7 @@ export class RaceController {
             ships: raceStandings(this.session.state),
             lapsToWin: this.session.state.config.lapsToWin,
             winnerId: this.session.state.winnerId,
-            mode: this.mode.kind,
+            mode: this.presentingEvent ? 'busy' : this.mode.kind,
             speed:
                 this.mode.kind === 'pick_speed' ? this.mode.speed : undefined,
             locked: this.locked,
@@ -918,6 +1045,23 @@ export class RaceController {
     }
 
     private headline(): string {
+        if (this.presentingEvent) {
+            switch (this.presentingEvent.type) {
+                case 'COMBAT_RESOLVED':
+                    return 'Boarding strikes land together.';
+                case 'RAMMING':
+                    return 'Ships collide!';
+                case 'WALL_COLLISION':
+                    return 'Reef strike!';
+                case 'SHIP_DESTROYED':
+                    return 'Ship lost!';
+                case 'RACE_WON':
+                case 'RACE_DRAWN':
+                    return 'The race is over.';
+                default:
+                    return 'Action underway…';
+            }
+        }
         switch (this.mode.kind) {
             case 'crew': {
                 const crew =
@@ -958,6 +1102,7 @@ export class RaceController {
     }
 
     private detail(): string {
+        if (this.presentingEvent) return this.eventLog;
         switch (this.mode.kind) {
             case 'crew': {
                 const crew =
@@ -999,6 +1144,8 @@ export class RaceController {
     }
 
     private controls(): string {
+        if (this.presentingEvent)
+            return 'Playing out the action · Ship panels show the resolved outcome';
         switch (this.mode.kind) {
             case 'crew':
                 return 'Choose an order · Wait preserves your chance · Retire permanently leaves the race';

@@ -79,3 +79,11 @@ Choose Human or Computer for each seat in the harbor. The default is one human a
 Computer captains use public state only, with no access to future random draws. They look ahead for corner speeds, favor forward progress, weigh ramming against damage, limit flogging to healthy crews in clear water, attack nearby boarders, and seek a vessel after being displaced. They never automatically retire. This is a single heuristic opponent, not a difficulty system or optimal strategy. Opening help or the log pauses new computer decisions; leaving the race cancels pending computer turns.
 
 `npx vitest run tests/core/ai.test.ts` checks 75 complete computer races across every supported fleet size and distance, plus crew actions, control ownership and corner behavior.
+
+## Saving races
+
+Races autosave in this browser after every rules action, including computer turns. Use **Continue race** at the harbor after a refresh or return visit. **Export save** downloads a JSON file during a race; the harbor also offers **Export saved race** and **Import save**. Starting a new race or importing a file asks before replacing the existing browser save. Invalid or incompatible imports leave it untouched.
+
+Browser storage is specific to the browser and origin (scheme, hostname, and port). Use export/import to move between localhost, the published website, or another device. Clearing site data removes the autosave. When browser storage is unavailable or full, the race continues and the footer prompts you to export instead.
+
+Save format version 1 stores the initial seed, fleet settings, human/computer assignments, and action history. Replaying that history restores the complete rules state and random sequence without replaying animations. Temporary UI selections, sound preferences, and the displayed ship's log are not saved. Rule changes that affect replay must bump `SAVE_VERSION` in `src/client/RaceSave.ts`. Imports are limited to 2 MB and 20,000 actions.

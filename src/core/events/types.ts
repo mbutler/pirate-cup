@@ -7,7 +7,7 @@ import type { HitSide } from '../track/types';
 import type { TurnPhase } from '../state/GameState';
 
 export type GameEvent =
-    | { type: 'CREW_MESSAGE'; message: string }
+    | { type: 'CREW_MESSAGE'; message: string; capturedShipId?: string }
     | { type: 'PHASE_CHANGED'; from: TurnPhase; to: TurnPhase }
     | { type: 'TURN_INPUT_RECEIVED'; playerId: string; speed: number }
     | { type: 'SHIP_MOVED'; playerId: string; from: string; to: string }

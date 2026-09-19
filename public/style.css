@@ -1174,3 +1174,9 @@ select {
 .captain-picker label { display: flex; align-items: center; justify-content: space-between; gap: 8px; text-transform: capitalize; font-size: 12px; }
 .captain-picker select { min-width: 0; padding: 7px; color: #eee8d4; background: #17383d; border: 1px solid #49606a; border-radius: 4px; }
 @media (max-width: 480px) { .captain-picker { grid-template-columns: 1fr; } }
+
+.save-panel { margin-bottom: 22px; }
+.save-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.save-actions [hidden] { display: none; }
+.save-message { max-width: 440px; }
+.save-status { font-size: 11px; color: var(--muted, #a7b8b6); }
