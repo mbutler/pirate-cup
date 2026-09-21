@@ -7,7 +7,6 @@ import { FINISH_LINE } from '../../core/rules/race';
 import type { TrackNode } from '../../core/track/types';
 import { defaultTrack } from '../../core/track/TrackGraph';
 import { RaceController } from '../race/RaceController';
-import { formatShipSummary } from '../ui/formatters';
 
 export class Race extends Scene {
     private controller?: RaceController;
@@ -22,9 +21,8 @@ export class Race extends Scene {
         this.cameras.main.setBackgroundColor(DISPLAY.backgroundColor);
         this.cameras.main.setScroll(0, 180);
         this.drawTrack();
-        this.addHexInspector(session);
-
         this.controller = new RaceController(this, session);
+        this.addHexInspector();
         this.controller.start();
 
         this.events.once(Scenes.Events.SHUTDOWN, () => {
@@ -32,7 +30,7 @@ export class Race extends Scene {
         });
     }
 
-    private addHexInspector(session: GameSession) {
+    private addHexInspector() {
         const label = this.add
             .text(0, 0, '', {
                 fontFamily: 'Arial, sans-serif',
@@ -43,8 +41,11 @@ export class Race extends Scene {
             })
             .setDepth(100)
             .setVisible(false);
-        const canvas = this.game.canvas;
         const inspect = (pointer: Phaser.Input.Pointer) => {
+            if (this.controller?.hoveringShip()) {
+                label.setVisible(false);
+                return;
+            }
             const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
             let nearest: TrackNode | undefined;
             let distance = 32 * 32;
@@ -58,16 +59,9 @@ export class Race extends Scene {
             }
             if (!nearest) {
                 label.setVisible(false);
-                canvas.removeAttribute('title');
                 return;
             }
-            const occupants = Object.values(session.state.ships).filter(
-                (ship) => ship.positionId === nearest!.id,
-            );
-            const detail = occupants
-                .map((ship) => `${ship.color} · ${formatShipSummary(ship)}`)
-                .join('\n');
-            const text = `${nearest.id.toUpperCase()} · ${nearest.safeSpeed === undefined ? 'Open water' : `Safe speed ${nearest.safeSpeed}`}${detail ? `\n${detail}` : ''}`;
+            const text = `${nearest.id.toUpperCase()} · ${nearest.safeSpeed === undefined ? 'Open water' : `Safe speed ${nearest.safeSpeed}`}`;
             label
                 .setText(text)
                 .setPosition(
@@ -75,11 +69,9 @@ export class Race extends Scene {
                     Math.max(190, nearest.y - label.height - 20),
                 )
                 .setVisible(true);
-            canvas.title = text;
         };
         const hide = () => {
             label.setVisible(false);
-            canvas.removeAttribute('title');
         };
         this.input.on('pointermove', inspect);
         this.input.on('pointerdown', inspect);
@@ -88,7 +80,6 @@ export class Race extends Scene {
             this.input.off('pointermove', inspect);
             this.input.off('pointerdown', inspect);
             this.input.off('gameout', hide);
-            canvas.removeAttribute('title');
         });
     }
 

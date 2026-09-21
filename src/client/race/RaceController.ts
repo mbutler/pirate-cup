@@ -112,6 +112,10 @@ export class RaceController {
         void this.resumeAfterAction();
     }
 
+    hoveringShip(): boolean {
+        return this.board.hoveringShip();
+    }
+
     destroy() {
         this.disposed = true;
         this.session.setSaveHandler(null);
@@ -960,6 +964,7 @@ export class RaceController {
         this.board.syncShips(
             this.session.state.ships,
             this.session.state.activePlayerId,
+            false,
         );
         this.board.syncCrews(
             this.session.state.displacedCrew,

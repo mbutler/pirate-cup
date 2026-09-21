@@ -2,6 +2,7 @@ import { defaultTrack, hullDamageLook } from '../../core';
 import type { ShipState, DisplacedCrew } from '../../core/entities/types';
 import type { MoveDirection, TrackNodeId } from '../../core/track/types';
 import { ASSETS, SHIP_FRAME } from '../config';
+import { formatShipSummary } from '../ui/formatters';
 import {
     TRACK_LAYOUT,
     trackNodeToWorld,
@@ -17,6 +18,72 @@ export class RaceBoard {
     private readonly movePreview: MovePreview;
     private activeRing?: Phaser.GameObjects.Arc;
     private activeRingTween?: Phaser.Tweens.Tween;
+    private activeRingShipId: string | null = null;
+    private ships: Record<string, ShipState> = {};
+    private hoveredShipId: string | null = null;
+    private shipTip?: Phaser.GameObjects.Text;
+
+    private readonly hideShipTip = () => {
+        this.hoveredShipId = null;
+        this.shipTip?.setVisible(false);
+    };
+
+    private readonly inspectPointer = (pointer: Phaser.Input.Pointer) => {
+        const point = this.scene.cameras.main.getWorldPoint(
+            pointer.x,
+            pointer.y,
+        );
+        let nearestId: string | null = null;
+        let nearest = 40 * 40;
+        for (const [id, sprite] of this.shipSprites) {
+            const dx = sprite.x - point.x;
+            const dy = sprite.y - point.y;
+            const squared = dx * dx + dy * dy;
+            if (squared < nearest) {
+                nearest = squared;
+                nearestId = id;
+            }
+        }
+        if (!nearestId) {
+            this.hideShipTip();
+            return;
+        }
+        this.hoveredShipId = nearestId;
+        this.refreshShipTip();
+    };
+
+    private refreshShipTip() {
+        const ship = this.hoveredShipId
+            ? this.ships[this.hoveredShipId]
+            : undefined;
+        const sprite = this.hoveredShipId
+            ? this.shipSprites.get(this.hoveredShipId)
+            : undefined;
+        if (!ship || !sprite) {
+            this.hideShipTip();
+            return;
+        }
+        if (!this.shipTip) {
+            this.shipTip = this.scene.add
+                .text(0, 0, '', {
+                    fontFamily: 'Arial, sans-serif',
+                    fontSize: '18px',
+                    color: '#fff3ca',
+                    backgroundColor: '#102c32',
+                    padding: { x: 10, y: 6 },
+                    wordWrap: { width: 420 },
+                })
+                .setDepth(110)
+                .setVisible(false);
+        }
+        this.shipTip
+            .setText(`${ship.color.toUpperCase()}\n${formatShipSummary(ship)}`)
+            .setPosition(
+                Math.min(1820, Math.max(20, sprite.x + 28)),
+                Math.max(190, sprite.y - this.shipTip.height - 18),
+            )
+            .setVisible(true);
+    }
 
     private quick = window.matchMedia('(prefers-reduced-motion: reduce)')
         .matches;
@@ -26,6 +93,13 @@ export class RaceBoard {
         onMove: (index: number) => void,
     ) {
         this.movePreview = new MovePreview(scene, onMove);
+        scene.input.on('pointermove', this.inspectPointer);
+        scene.input.on('pointerdown', this.inspectPointer);
+        scene.input.on('gameout', this.hideShipTip);
+    }
+
+    hoveringShip(): boolean {
+        return this.hoveredShipId !== null;
     }
 
     togglePace() {
@@ -33,11 +107,26 @@ export class RaceBoard {
     }
 
     destroy() {
+        this.scene.input.off('pointermove', this.inspectPointer);
+        this.scene.input.off('pointerdown', this.inspectPointer);
+        this.scene.input.off('gameout', this.hideShipTip);
         this.clearMovePreview();
         this.hideActiveRing();
+        this.hideShipTip();
+        this.shipTip?.destroy();
+        this.shipTip = undefined;
     }
 
-    syncShips(ships: Record<string, ShipState>, activePlayerId: string | null) {
+    /**
+     * `relocate` snaps sprites onto current hexes. Leave it false while move
+     * tweens are playing — game state is already at the destination.
+     */
+    syncShips(
+        ships: Record<string, ShipState>,
+        activePlayerId: string | null,
+        relocate = true,
+    ) {
+        this.ships = ships;
         for (const ship of Object.values(ships)) {
             let sprite = this.shipSprites.get(ship.id);
 
@@ -46,8 +135,14 @@ export class RaceBoard {
                 this.shipSprites.set(ship.id, sprite);
             }
 
-            sprite.setTexture(ASSETS.ships.textureKeyForColor(ship.color));
-            this.placeShipSprite(sprite, ship.positionId);
+            const textureKey = ASSETS.ships.textureKeyForColor(ship.color);
+            if (sprite.texture.key !== textureKey) {
+                sprite.setTexture(textureKey);
+            }
+            if (relocate) {
+                this.scene.tweens.killTweensOf(sprite);
+                this.placeShipSprite(sprite, ship.positionId);
+            }
 
             let label = this.shipLabels.get(ship.id);
 
@@ -66,38 +161,42 @@ export class RaceBoard {
             }
 
             label.setText(ship.color.toUpperCase());
-            label.setPosition(
-                sprite.x,
-                sprite.y - (ship.id === activePlayerId ? 62 : 48),
-            );
+            if (relocate) {
+                this.scene.tweens.killTweensOf(label);
+                label.setPosition(
+                    sprite.x,
+                    sprite.y - (ship.id === activePlayerId ? 62 : 48),
+                );
+            }
             label.setVisible(ship.id === activePlayerId);
 
             const look = hullDamageLook(ship);
             if (look === 'wreck') {
                 sprite.setFrame(SHIP_FRAME.wreck);
-                sprite.setAlpha(0.6);
+                if (relocate) sprite.setAlpha(0.6);
             } else if (look === 'heavy') {
                 sprite.setFrame(SHIP_FRAME.damageHeavy);
-                sprite.setAlpha(1);
+                if (relocate) sprite.setAlpha(1);
             } else if (look === 'light') {
                 sprite.setFrame(SHIP_FRAME.damageLight);
-                sprite.setAlpha(1);
+                if (relocate) sprite.setAlpha(1);
             } else if (ship.id === activePlayerId) {
                 sprite.setFrame(SHIP_FRAME.active);
-                sprite.setAlpha(1);
+                if (relocate) sprite.setAlpha(1);
             } else {
                 sprite.setFrame(SHIP_FRAME.normal);
-                sprite.setAlpha(1);
+                if (relocate) sprite.setAlpha(1);
             }
 
-            if (ship.id === activePlayerId && look !== 'wreck') {
-                this.showActiveRing(sprite.x, sprite.y);
+            if (relocate && ship.id === activePlayerId && look !== 'wreck') {
+                this.showActiveRing(sprite.x, sprite.y, ship.id);
             }
         }
 
         if (!activePlayerId) {
             this.hideActiveRing();
         }
+        if (this.hoveredShipId) this.refreshShipTip();
     }
 
     syncCrews(crews: Record<string, DisplacedCrew>, activeId: string | null) {
@@ -172,7 +271,7 @@ export class RaceBoard {
         const world = trackNodeToWorld(node);
 
         sprite.setData('positionId', toPositionId);
-        if (this.activeRing) {
+        if (this.activeRing && this.activeRingShipId === shipId) {
             this.scene.tweens.add({
                 targets: this.activeRing,
                 x: world.x,
@@ -356,9 +455,10 @@ export class RaceBoard {
         });
     }
 
-    private showActiveRing(x: number, y: number) {
+    private showActiveRing(x: number, y: number, shipId: string) {
         this.hideActiveRing();
 
+        this.activeRingShipId = shipId;
         this.activeRing = this.scene.add
             .circle(x, y, 34, 0xf2ca02, 0)
             .setDepth(9);
@@ -379,6 +479,7 @@ export class RaceBoard {
         this.activeRingTween = undefined;
         this.activeRing?.destroy();
         this.activeRing = undefined;
+        this.activeRingShipId = null;
     }
 
     private createShipSprite(ship: ShipState) {
