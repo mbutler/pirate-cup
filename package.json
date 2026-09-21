@@ -10,7 +10,8 @@
     "dev-nolog": "vite --config vite/config.dev.mjs",
     "build-nolog": "vite build --config vite/config.prod.mjs",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "sim": "node scripts/sim.mjs"
   },
   "devDependencies": {
     "typescript": "~5.7.2",

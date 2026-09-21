@@ -48,6 +48,7 @@ export const STYLES = {
         boarding: 0.25,
     },
 };
+export type StyleWeights = (typeof STYLES)[Personality];
 
 export function assignPersonalities(
     seed: string,
