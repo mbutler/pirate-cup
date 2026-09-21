@@ -1,5 +1,11 @@
 import { PERSONALITY_LABELS, type CaptainPersonalities } from '../../core/ai/Personality';
-import type { ShipState, DisplacedCrew } from '../../core/entities/types';
+import {
+    hullDamageLook,
+    hullPoints,
+    MAX_HULL_POINTS,
+    type ShipState,
+    type DisplacedCrew,
+} from '../../core/entities/types';
 import type { TurnPhase } from '../../core/state/GameState';
 import {
     COMPASS,
@@ -143,7 +149,7 @@ export class GameHud {
                 )
                 .map(
                     (racer, i) =>
-                        `<div class="fleet-ship ${racer.id === snapshot.activePlayerId ? 'is-active' : ''} ${racer.destroyed ? 'is-wrecked' : ''}" style="--ship-color:${SHIP_COLORS[racer.color]}">${shipIcon(racer.color)}<div><strong>${racer.color} <small>${racer.ownerId.replace('player-', 'P')}${snapshot.computerCaptains.includes(racer.ownerId) ? ` · ${PERSONALITY_LABELS[snapshot.personalities[racer.ownerId] ?? 'racer']}` : ''}</small></strong><span>${racer.destroyed ? (snapshot.displacedCrew.some((crew) => crew.id === racer.ownerId) ? 'Crew afloat' : 'Wrecked') : racer.id === snapshot.winnerId ? 'Winner' : `#${i + 1} · Lap ${Math.min(racer.lapsCompleted + 1, snapshot.lapsToWin)}/${snapshot.lapsToWin}${racer.rowers.temperament === 'mutiny' ? ' · Mutiny' : ''}`}</span></div><i></i></div>`,
+                        `<div class="fleet-ship ${racer.id === snapshot.activePlayerId ? 'is-active' : ''} ${racer.destroyed ? 'is-wrecked' : ''}" style="--ship-color:${SHIP_COLORS[racer.color]}">${shipIcon(racer.color, hullIconClass(racer))}<div><strong>${racer.color} <small>${racer.ownerId.replace('player-', 'P')}${snapshot.computerCaptains.includes(racer.ownerId) ? ` · ${PERSONALITY_LABELS[snapshot.personalities[racer.ownerId] ?? 'racer']}` : ''}</small></strong><span>${racer.destroyed ? (snapshot.displacedCrew.some((crew) => crew.id === racer.ownerId) ? 'Crew afloat' : 'Wrecked') : racer.id === snapshot.winnerId ? 'Winner' : `#${i + 1} · Lap ${Math.min(racer.lapsCompleted + 1, snapshot.lapsToWin)}/${snapshot.lapsToWin} · Hull ${hullPoints(racer.hull)}${racer.rowers.temperament === 'mutiny' ? ' · Mutiny' : ''}`}</span></div><i></i></div>`,
                 )
                 .join('') +
                 snapshot.displacedCrew
@@ -179,7 +185,7 @@ export class GameHud {
                             : `<div class="underway"><span class="signal"></span> ${snapshot.mode === 'mutiny_run' ? 'The crew has the helm' : 'Resolving your move…'}</div>`;
         replaceContent(
             this.command,
-            `<div class="captain-status" style="--ship-color:${SHIP_COLORS[ship?.color ?? 'red']}"><div class="captain-heading">${ship ? shipIcon(ship.color) : COMPASS}<div><span class="eyebrow">${ship ? `CAPTAIN ${ship.ownerId.replace('player-', '0')}` : 'ALL HANDS'}</span><h2>${ship ? `${ship.color} fleet` : snapshot.mode === 'crew' ? 'Crew afloat' : snapshot.mode === 'finished' ? 'All ships lost' : 'Round complete'}</h2></div></div>${ship ? `<div class="hull-meter"><span>Hull integrity <b>${ship.hull.structure} / 30</b></span><div class="meter-track"><i style="width:${Math.max(0, (ship.hull.structure / 30) * 100)}%"></i></div></div><div class="ship-stats"><span>Bow <b>${ship.hull.front}</b></span><span>Port <b>${ship.hull.left}</b></span><span>Starboard <b>${ship.hull.right}</b></span><span>Stern <b>${ship.hull.rear}</b></span></div><div class="crew-line"><span>Rowers <b>${ship.rowers.hp}</b></span><span>Max speed <b>${ship.maxSpeed}</b></span><span>Boarder <b>${ship.crew.boarderHp}/10</b></span><span class="temperament">${ship.rowers.temperament}</span></div>` : snapshot.mode === 'crew' ? '<p class="round-note">Your race is still alive.<br>Find a ship and take the helm.</p>' : snapshot.mode === 'finished' ? '<p class="round-note">A hard-fought race.<br>A fresh start awaits.</p>' : '<p class="round-note">The fleet regroups.<br>Prepare for the next round.</p>'}</div>
+            `<div class="captain-status" style="--ship-color:${SHIP_COLORS[ship?.color ?? 'red']}"><div class="captain-heading">${ship ? shipIcon(ship.color, hullIconClass(ship)) : COMPASS}<div><span class="eyebrow">${ship ? `CAPTAIN ${ship.ownerId.replace('player-', '0')}` : 'ALL HANDS'}</span><h2>${ship ? `${ship.color} fleet` : snapshot.mode === 'crew' ? 'Crew afloat' : snapshot.mode === 'finished' ? 'All ships lost' : 'Round complete'}</h2></div></div>${ship ? `<div class="hull-meter"><span><em>Hull <b>${hullPoints(ship.hull)} / ${MAX_HULL_POINTS}</b></em><em>Integrity <b>${ship.hull.structure} / 30</b></em></span><div class="meter-track"><i style="width:${Math.max(0, (hullPoints(ship.hull) / MAX_HULL_POINTS) * 100)}%"></i></div></div><div class="ship-stats"><span>Bow <b>${ship.hull.front}</b></span><span>Port <b>${ship.hull.left}</b></span><span>Starboard <b>${ship.hull.right}</b></span><span>Stern <b>${ship.hull.rear}</b></span></div><div class="crew-line"><span>Rowers <b>${ship.rowers.hp}</b></span><span>Max speed <b>${ship.maxSpeed}</b></span><span>Boarder <b>${ship.crew.boarderHp}/10</b></span><span class="temperament">${ship.rowers.temperament}</span></div>` : snapshot.mode === 'crew' ? '<p class="round-note">Your race is still alive.<br>Find a ship and take the helm.</p>' : snapshot.mode === 'finished' ? '<p class="round-note">A hard-fought race.<br>A fresh start awaits.</p>' : '<p class="round-note">The fleet regroups.<br>Prepare for the next round.</p>'}</div>
             <div class="command-main"><div class="command-heading"><div><span class="eyebrow gold">${snapshot.mode === 'pick_speed' ? '01 / SET YOUR PACE' : snapshot.mode === 'choose_move' ? '02 / CHOOSE YOUR LINE' : snapshot.mode === 'flog_prompt' ? '03 / TEMPT YOUR LUCK' : snapshot.mode === 'boarding' ? '04 / BOARDING ORDERS' : snapshot.mode === 'finished' ? 'THE PIRATE CUP / FINAL RESULT' : 'THE RACE CONTINUES'}</span><h2>${escapeHtml(snapshot.headline)}</h2></div>${snapshot.mode === 'pick_speed' ? `<span class="speed-readout">${snapshot.speed}<small> / ${ship?.maxSpeed}</small></span>` : snapshot.mode === 'choose_move' ? `<span class="speed-readout">${ship?.movementRemaining}<small> left</small></span>` : ''}</div><p class="command-detail">${escapeHtml(snapshot.detail)}</p><div class="command-actions">${actionButtons}</div><p class="keyboard-hint">${escapeHtml(snapshot.controls)}</p></div>`,
         );
     }
@@ -208,4 +214,9 @@ export class GameHud {
         this.dialog.close();
         this.root.remove();
     }
+}
+
+function hullIconClass(ship: ShipState): string {
+    const look = hullDamageLook(ship);
+    return look === 'none' ? '' : `is-${look === 'wreck' ? 'wreck' : `damage-${look}`}`;
 }

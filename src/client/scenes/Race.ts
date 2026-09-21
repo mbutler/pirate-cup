@@ -7,6 +7,7 @@ import { FINISH_LINE } from '../../core/rules/race';
 import type { TrackNode } from '../../core/track/types';
 import { defaultTrack } from '../../core/track/TrackGraph';
 import { RaceController } from '../race/RaceController';
+import { formatShipSummary } from '../ui/formatters';
 
 export class Race extends Scene {
     private controller?: RaceController;
@@ -64,11 +65,8 @@ export class Race extends Scene {
                 (ship) => ship.positionId === nearest!.id,
             );
             const detail = occupants
-                .map(
-                    (ship) =>
-                        `${ship.color}${ship.destroyed ? ' wreck (passable)' : ' ship'}`,
-                )
-                .join(' · ');
+                .map((ship) => `${ship.color} · ${formatShipSummary(ship)}`)
+                .join('\n');
             const text = `${nearest.id.toUpperCase()} · ${nearest.safeSpeed === undefined ? 'Open water' : `Safe speed ${nearest.safeSpeed}`}${detail ? `\n${detail}` : ''}`;
             label
                 .setText(text)

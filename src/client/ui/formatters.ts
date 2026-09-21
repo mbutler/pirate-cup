@@ -1,6 +1,9 @@
 import type { CorneringOutcome, FloggingOutcome } from '../../core/cards/decks';
 import type { GameEvent } from '../../core/events/types';
-import type { ShipState } from '../../core/entities/types';
+import {
+    hullPoints,
+    type ShipState,
+} from '../../core/entities/types';
 import type { TurnPhase } from '../../core/state/GameState';
 import type { MoveDirection } from '../../core/track/types';
 
@@ -85,13 +88,16 @@ export function formatFloggingOutcome(outcome: FloggingOutcome): string {
 
 export function formatShipSummary(ship: ShipState): string {
     const parts = [
+        `Hull ${hullPoints(ship.hull)}`,
+        `Integrity ${ship.hull.structure}`,
+        `F${ship.hull.front} R${ship.hull.rear} L${ship.hull.left} S${ship.hull.right}`,
         `Sails ${ship.maxSpeed}`,
         `Rowers ${ship.rowers.hp}`,
-        `F${ship.hull.front} R${ship.hull.rear} L${ship.hull.left} S${ship.hull.right}`,
-        `Struct ${ship.hull.structure}`,
     ];
 
-    if (ship.rowers.temperament === 'mutiny') {
+    if (ship.destroyed) {
+        parts.unshift('WRECK (passable)');
+    } else if (ship.rowers.temperament === 'mutiny') {
         parts.unshift('MUTINY');
     }
 
@@ -114,14 +120,6 @@ export function formatHitSide(side: string): string {
 }
 
 export function formatEventMessage(event: GameEvent): string {
-    const wallOutcomes = {
-        hull3EndChecks: '−3 hull; corner checks end',
-        mast3EndChecks: '−3 rowers; corner checks end',
-        both3EndChecks: '−3 hull, −3 rowers; corner checks end',
-        both6EndChecks: '−6 hull, −6 rowers; corner checks end',
-        crashKeepFrenzy: '−6 hull, −6 rowers; movement ends',
-        crash: '−6 hull, −6 rowers; movement and mutiny end',
-    };
     switch (event.type) {
         case 'CREW_MESSAGE':
             return event.message;
@@ -135,8 +133,18 @@ export function formatEventMessage(event: GameEvent): string {
             return `Cornering: ${formatCorneringOutcome(event.outcome)}`;
         case 'FLOGGING_DRAWN':
             return `Flogging: ${formatFloggingOutcome(event.outcome)}`;
-        case 'WALL_COLLISION':
-            return `Reef strike (${formatHitSide(event.side)}): ${wallOutcomes[event.outcome]}`;
+        case 'WALL_COLLISION': {
+            const wallFace = formatHitSide(event.side);
+            const wallOutcomes = {
+                hull3EndChecks: `−3 ${wallFace}; corner checks end`,
+                mast3EndChecks: '−3 rowers; corner checks end',
+                both3EndChecks: `−3 ${wallFace}, −3 rowers; corner checks end`,
+                both6EndChecks: `−6 ${wallFace}, −6 rowers; corner checks end`,
+                crashKeepFrenzy: `−6 ${wallFace}, −6 rowers; movement ends`,
+                crash: `−6 ${wallFace}, −6 rowers; movement and mutiny end`,
+            };
+            return `Reef strike (${wallFace}): ${wallOutcomes[event.outcome]}`;
+        }
         case 'RAMMING': {
             const rammerParts = [
                 event.rammerHullDamage

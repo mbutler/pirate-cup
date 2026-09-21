@@ -145,8 +145,18 @@ select {
     width: 46px;
     height: 79px;
     background-repeat: no-repeat;
-    background-size: 276px 79px;
+    background-size: 600% 100%;
+    background-position: 0 0;
     flex-shrink: 0;
+}
+.ship-icon.is-damage-light {
+    background-position: 60% 0;
+}
+.ship-icon.is-damage-heavy {
+    background-position: 80% 0;
+}
+.ship-icon.is-wreck {
+    background-position: 100% 0;
 }
 .harbor {
     position: absolute;
@@ -435,7 +445,6 @@ select {
 .fleet-ship .ship-icon {
     width: 28px;
     height: 46px;
-    background-size: 168px 48px;
 }
 .fleet-ship strong {
     text-transform: capitalize;
@@ -558,6 +567,9 @@ select {
     justify-content: space-between;
     font-size: 10px;
     color: var(--muted);
+}
+.hull-meter em {
+    font-style: normal;
 }
 .hull-meter b {
     color: var(--cream);
@@ -1079,7 +1091,10 @@ select {
         margin: 6px 0;
     }
     .ship-stats {
-        display: none;
+        margin-top: 8px;
+    }
+    .ship-stats b {
+        font-size: 13px;
     }
     .crew-line {
         grid-column: 1/-1;

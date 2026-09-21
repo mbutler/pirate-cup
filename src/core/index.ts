@@ -21,9 +21,13 @@ export {
     DEFAULT_CREW,
     DEFAULT_HULL,
     DEFAULT_ROWERS,
+    MAX_HULL_POINTS,
+    hullDamageLook,
+    hullPoints,
     maxSpeedFromRowers,
     sailsFromMastHp,
 } from './entities/types';
+export type { HullDamageLook } from './entities/types';
 
 export {
     createInitialState,

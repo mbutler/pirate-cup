@@ -1,4 +1,4 @@
-import { defaultTrack } from '../../core';
+import { defaultTrack, hullDamageLook } from '../../core';
 import type { ShipState, DisplacedCrew } from '../../core/entities/types';
 import type { MoveDirection, TrackNodeId } from '../../core/track/types';
 import { ASSETS, SHIP_FRAME } from '../config';
@@ -72,16 +72,26 @@ export class RaceBoard {
             );
             label.setVisible(ship.id === activePlayerId);
 
-            if (ship.destroyed) {
+            const look = hullDamageLook(ship);
+            if (look === 'wreck') {
                 sprite.setFrame(SHIP_FRAME.wreck);
                 sprite.setAlpha(0.6);
+            } else if (look === 'heavy') {
+                sprite.setFrame(SHIP_FRAME.damageHeavy);
+                sprite.setAlpha(1);
+            } else if (look === 'light') {
+                sprite.setFrame(SHIP_FRAME.damageLight);
+                sprite.setAlpha(1);
             } else if (ship.id === activePlayerId) {
                 sprite.setFrame(SHIP_FRAME.active);
                 sprite.setAlpha(1);
-                this.showActiveRing(sprite.x, sprite.y);
             } else {
                 sprite.setFrame(SHIP_FRAME.normal);
                 sprite.setAlpha(1);
+            }
+
+            if (ship.id === activePlayerId && look !== 'wreck') {
+                this.showActiveRing(sprite.x, sprite.y);
             }
         }
 
@@ -162,10 +172,7 @@ export class RaceBoard {
         const world = trackNodeToWorld(node);
 
         sprite.setData('positionId', toPositionId);
-        if (
-            this.activeRing &&
-            Number(sprite.frame.name) === SHIP_FRAME.active
-        ) {
+        if (this.activeRing) {
             this.scene.tweens.add({
                 targets: this.activeRing,
                 x: world.x,

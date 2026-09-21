@@ -62,6 +62,26 @@ export const DEFAULT_HULL: HullState = {
     structure: 30,
 };
 
+/** Remaining bow + stern + port + starboard + inner structure. */
+export function hullPoints(hull: HullState): number {
+    return hull.front + hull.rear + hull.left + hull.right + hull.structure;
+}
+
+export const MAX_HULL_POINTS = hullPoints(DEFAULT_HULL);
+
+export type HullDamageLook = 'none' | 'light' | 'heavy' | 'wreck';
+
+/** Visual hull wear from total remaining points and inner structure. */
+export function hullDamageLook(
+    ship: Pick<ShipState, 'hull' | 'destroyed'>,
+): HullDamageLook {
+    if (ship.destroyed || ship.hull.structure <= 0) return 'wreck';
+    const ratio = hullPoints(ship.hull) / MAX_HULL_POINTS;
+    if (ratio <= 0.4 || ship.hull.structure <= 10) return 'heavy';
+    if (ratio < 1) return 'light';
+    return 'none';
+}
+
 export const DEFAULT_CREW: CrewState = {
     captainHp: 10,
     boarderHp: 10,

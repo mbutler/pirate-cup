@@ -957,6 +957,10 @@ export class RaceController {
         if (this.disposed) return;
         const ship = this.activeShip();
 
+        this.board.syncShips(
+            this.session.state.ships,
+            this.session.state.activePlayerId,
+        );
         this.board.syncCrews(
             this.session.state.displacedCrew,
             this.session.state.activeCrewId,
